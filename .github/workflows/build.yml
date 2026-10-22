@@ -1,0 +1,68 @@
+# Builds Isola for macOS (universal) and Windows (x64 and ARM64) and attaches the installers and zips to the run.
+# Runs on pushes to main and dev, on pull requests, by hand, and from release.yml with a version to stamp in.
+name: Build
+
+on:
+  push:
+    branches: [main, dev]
+    paths-ignore: ["**.md"]
+  # Every pull request, Markdown-only ones included: the rulesets require these checks, and a skipped check never passes.
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      version:
+        description: "Version to stamp into the apps, like 1.2.0"
+        type: string
+        required: false
+        default: ""
+
+jobs:
+  macos:
+    name: macOS
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Isola.app
+        env:
+          UNIVERSAL: "1"
+          ZIP: "1"
+          DMG: "1"
+          VERSION: ${{ inputs.version }}
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: macOS/build_app.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Isola-macOS
+          path: |
+            macOS/build/Isola-macOS.zip
+            macOS/build/Isola-macOS.dmg
+          if-no-files-found: error
+
+  windows:
+    name: Windows (${{ matrix.arch }})
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        arch: [x64, arm64]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) { choco install innosetup -y --no-progress }
+      - name: Build Isola.exe and its installer
+        shell: pwsh
+        env:
+          VERSION: ${{ inputs.version }}
+        run: ./Windows/build.ps1 -Runtime win-${{ matrix.arch }} -Version "$env:VERSION" -Installer
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Isola-Windows-${{ matrix.arch }}
+          path: |
+            Windows/build/Isola-Windows-${{ matrix.arch }}.zip
+            Windows/build/Isola-Windows-${{ matrix.arch }}-Setup.exe
+          if-no-files-found: error

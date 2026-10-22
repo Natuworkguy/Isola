@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Isola for Windows. WPF, written in code rather than XAML, and referenced through the WindowsDesktop framework
+    directly, so it also builds on Linux and macOS (with EnableWindowsTargeting) for a compile check.
+    The Windows 10 SDK target brings the WinRT media session API.
+  -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>Isola</RootNamespace>
+    <AssemblyName>Isola</AssemblyName>
+    <ApplicationIcon>Isola.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Version>0.3.0</Version>
+    <Product>Isola</Product>
+    <Description>A Dynamic Island for Windows.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App" />
+    <PackageReference Include="NAudio.Wasapi" Version="2.2.1" />
+    <PackageReference Include="System.Management" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Isola.ico" LogicalName="Isola.ico" />
+  </ItemGroup>
+
+</Project>

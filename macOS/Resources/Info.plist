@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key><string>Isola</string>
+    <key>CFBundleDisplayName</key><string>Isola</string>
+    <key>CFBundleIdentifier</key><string>com.natuworkguy.isola</string>
+    <key>CFBundleExecutable</key><string>Isola</string>
+    <key>CFBundlePackageType</key><string>APPL</string>
+    <key>CFBundleIconFile</key><string>AppIcon</string>
+    <key>CFBundleShortVersionString</key><string>0.3.0</string>
+    <key>CFBundleVersion</key><string>3</string>
+    <key>LSMinimumSystemVersion</key><string>14.0</string>
+    <key>LSUIElement</key><true/>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key><string>com.natuworkguy.isola</string>
+            <key>CFBundleURLSchemes</key>
+            <array><string>isola</string></array>
+        </dict>
+    </array>
+    <key>CFBundleDocumentTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleTypeName</key><string>Any file</string>
+            <key>CFBundleTypeRole</key><string>Viewer</string>
+            <key>LSHandlerRank</key><string>None</string>
+            <key>LSItemContentTypes</key>
+            <array><string>public.item</string></array>
+        </dict>
+    </array>
+    <key>NSHighResolutionCapable</key><true/>
+    <key>NSHumanReadableCopyright</key><string>Made by Natuworkguy</string>
+    <key>NSAppleEventsUsageDescription</key>
+    <string>Isola reads the current track from Music and Spotify and lets you control playback from the island.</string>
+    <key>NSBluetoothAlwaysUsageDescription</key>
+    <string>Isola shows in the island when your AirPods or other headphones connect.</string>
+    <key>NSCalendarsUsageDescription</key>
+    <string>Isola shows your upcoming events in the island.</string>
+    <key>NSDownloadsFolderUsageDescription</key>
+    <string>Isola shows in the island when a download finishes.</string>
+    <key>NSDesktopFolderUsageDescription</key>
+    <string>Isola shows in the island when a screenshot is saved.</string>
+    <key>NSCalendarsFullAccessUsageDescription</key>
+    <string>Isola shows your upcoming events in the island.</string>
+</dict>
+</plist>
