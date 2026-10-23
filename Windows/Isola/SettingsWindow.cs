@@ -162,7 +162,7 @@ sealed class SettingsWindow : Window
             Row("Open the island by", Picker(new[] { "Hovering over it", "Clicking it", "Scrolling over it" }, (int)s.OpenWith, i => s.OpenWith = (OpenWith)i)),
             Row("Open when the pointer is", Picker(new[] { "Near the island", "On the island" }, (int)s.HoverArea, i => s.HoverArea = (HoverArea)i)),
             SliderRow("Hover delay", s.HoverDelay, 0, 0.6, 0.02, v => s.HoverDelay = v, v => $"{v:0.00}s"),
-            Row("Clicking it opens it too, when it opens by hovering", Switch(s.ClickOpens, v => s.ClickOpens = v)),
+            Row("Clicking it opens it too, when it opens by hovering or scrolling", Switch(s.ClickOpens, v => s.ClickOpens = v)),
             Caption("Off, a click on the closed island goes through to whatever is under it."),
             Row("Open when dragging files toward it", Switch(s.ExpandOnFileDrag, v => s.ExpandOnFileDrag = v)),
             Row("Shake a dragged file to bring up the Basket", Switch(s.ShakeBasket, v => s.ShakeBasket = v)));

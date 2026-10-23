@@ -138,10 +138,11 @@ final class NotchController {
             guard let self else { return event }
             return self.handleScroll(event) ? nil : event
         }
-        // Scrolls next to the island go to the app underneath, so they are watched from outside too. Set to open by
-        // scrolling, one near the closed island opens it.
+        // Scrolls next to the island go to the app underneath, so they are watched from outside too: set to open by
+        // scrolling, one near the closed island opens it. So do scrolls over it while clicks go through it, which
+        // swipes still open it with.
         globalScrollMonitor = NSEvent.addGlobalMonitorForEvents(matching: .scrollWheel) { [weak self] event in
-            guard let self, !self.state.isExpanded, OpenWith.current == .scroll,
+            guard let self, !self.state.isExpanded, OpenWith.current == .scroll || self.clicksThrough,
                   self.closedArea().contains(NSEvent.mouseLocation) else { return }
             _ = self.handleScroll(event)
         }
@@ -281,18 +282,22 @@ final class NotchController {
 }
 
 extension NotchController {
+    /// Clicks turned off: the closed island lets them through to whatever is under it, unless a banner or card is up
+    /// to be put away. Hovering is told from the pointer's place and scrolling is watched from outside, so either
+    /// still opens it.
+    fileprivate var clicksThrough: Bool {
+        !state.isExpanded && !OpenWith.clickOpens && state.banner == nil && state.peekID == nil
+    }
+
     fileprivate func tick() {
         let point = NSEvent.mouseLocation
         trackDrag(point)
 
         // Clicks, hovers and drops only belong to the island; everywhere else in the panel they pass through. So do
-        // clicks on the closed island when they don't open it, unless a banner or card is up to be put away: hovering
-        // is told from the pointer's place, not from mouse events, so it still opens it.
+        // clicks on the closed island when they don't open it (see clicksThrough).
         let interactive = state.isExpanded
             ? islandRect(expanded: true).insetBy(dx: -4, dy: -4)
             : islandRect(expanded: false).insetBy(dx: -12, dy: -12)
-        let clicksThrough = !state.isExpanded && OpenWith.current == .hover && !OpenWith.clickOpens
-            && state.banner == nil && state.peekID == nil
         let passThrough = clicksThrough || !interactive.contains(point)
         if panel.ignoresMouseEvents != passThrough { panel.ignoresMouseEvents = passThrough }
 

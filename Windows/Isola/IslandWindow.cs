@@ -219,13 +219,12 @@ sealed class IslandWindow : Window
         island.MouseLeftButtonUp += (_, _) =>
         {
             // A click on a banner or card puts it away. A click on an activity with steps shows its card; anywhere
-            // else opens the island, unless it opens by scrolling, or by hovering with clicks turned off.
+            // else opens the island, unless clicks are turned off (then they go through it, and never get here).
             if (open) return;
             if (banner is not null) DismissBanner();
             else if (Activities.PeekId is not null) Activities.DismissPeek();
             else if (Activities.Compact(media.Primary?.IsPlaying == true) is { Steps.Count: > 0 } activity) Activities.Peek(activity.Id, 8);
-            else if (Settings.Current.OpenWith == OpenWith.Click
-                     || (Settings.Current.OpenWith == OpenWith.Hover && Settings.Current.ClickOpens)) Expand();
+            else if (Settings.Current.OpenWith == OpenWith.Click || Settings.Current.ClickOpens) Expand();
         };
         // Vertical swipes on a touchpad arrive as the mouse wheel. Inside the open island they only count on its top
         // edge, so lists and rows still scroll.
@@ -475,15 +474,15 @@ sealed class IslandWindow : Window
     }
 
     /// <summary>
-    /// Opening by hovering with clicks turned off, a click on the closed island goes through to whatever is under it,
-    /// unless a banner or card is up to be put away. CheckNear tells hovering from the pointer's place, so it still
-    /// opens the island.
+    /// With clicks turned off, a click on the closed island goes through to whatever is under it, unless a banner or
+    /// card is up to be put away. CheckNear tells hovering from the pointer's place, and the wheel is watched from a
+    /// hook, so hovering or scrolling still opens it.
     /// </summary>
     void UpdateClickThrough()
     {
         var s = Settings.Current;
         var through = !open && banner is null && Activities.PeekId is null
-            && s.OpenWith == OpenWith.Hover && !s.ClickOpens;
+            && s.OpenWith != OpenWith.Click && !s.ClickOpens;
         if (through == clickThrough) return;
         var hwnd = new WindowInteropHelper(this).Handle;
         if (hwnd == IntPtr.Zero) return;

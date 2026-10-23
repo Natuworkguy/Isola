@@ -143,14 +143,10 @@ enum OpenWith: String, CaseIterable, Identifiable {
     static var current: OpenWith {
         OpenWith(rawValue: UserDefaults.standard.string(forKey: Prefs.openWith) ?? "") ?? .hover
     }
-    /// Whether a click on the closed island opens it: always when it opens by clicking, never when it opens by
-    /// scrolling, and when it opens by hovering, unless that's turned off.
+    /// Whether a click on the closed island opens it: always when it opens by clicking, and otherwise unless that's
+    /// turned off. Turned off, clicks go through the closed island to whatever is under it.
     static var clickOpens: Bool {
-        switch current {
-        case .click: return true
-        case .scroll: return false
-        case .hover: return UserDefaults.standard.bool(forKey: Prefs.clickOpens)
-        }
+        current == .click || UserDefaults.standard.bool(forKey: Prefs.clickOpens)
     }
 }
 

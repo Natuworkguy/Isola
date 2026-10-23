@@ -114,8 +114,8 @@ struct IslandSettings: View {
                 }
                 .disabled(openWith != .hover)
                 Toggle("Clicking it opens it too", isOn: $clickOpens)
-                    .disabled(openWith != .hover)
-                if openWith == .hover && !clickOpens {
+                    .disabled(openWith == .click)
+                if openWith != .click && !clickOpens {
                     Text("A click on the closed island goes through to whatever is under it.")
                         .font(.caption)
                         .foregroundStyle(.secondary)

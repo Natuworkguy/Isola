@@ -11,7 +11,7 @@ public enum IslandStyle { Floating, Attached }
 public enum IslandMaterial { Glass, Solid }
 /// <summary>How close the pointer has to come for the island to open: near it, or over the island itself.</summary>
 public enum HoverArea { Near, On }
-/// <summary>What opens the closed island. A click opens it with Hover too, unless ClickOpens is off.</summary>
+/// <summary>What opens the closed island. A click opens it with Hover and Scroll too, unless ClickOpens is off.</summary>
 public enum OpenWith { Hover, Click, Scroll }
 
 /// <summary>Everything the Settings window changes, saved as JSON in %AppData%\Isola.</summary>
@@ -30,7 +30,9 @@ public sealed class Settings
     public bool? ExpandOnHover { get => null; set { if (value == false) OpenWith = OpenWith.Click; } }
     public double HoverDelay { get; set; } = 0.12;
     public HoverArea HoverArea { get; set; } = HoverArea.Near;
-    /// <summary>With Hover: whether a click on the closed island opens it too.</summary>
+    /// <summary>
+    /// With Hover or Scroll: whether a click on the closed island opens it too. Off, clicks go through it.
+    /// </summary>
     public bool ClickOpens { get; set; } = true;
     public bool ExpandOnFileDrag { get; set; } = true;
     public bool ShakeBasket { get; set; } = true;
