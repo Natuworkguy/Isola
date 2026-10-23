@@ -78,6 +78,7 @@ struct IslandSettings: View {
     @AppStorage(Prefs.openWith) private var openWith: OpenWith = .hover
     @AppStorage(Prefs.hoverDelay) private var hoverDelay = 0.12
     @AppStorage(Prefs.hoverArea) private var hoverArea: HoverArea = .near
+    @AppStorage(Prefs.clickOpens) private var clickOpens = true
     @AppStorage(Prefs.expandOnFileDrag) private var expandOnFileDrag = true
     @AppStorage(Prefs.shakeBasket) private var shakeBasket = true
     @AppStorage(Prefs.haptics) private var haptics = true
@@ -112,6 +113,13 @@ struct IslandSettings: View {
                         .frame(width: 52, alignment: .trailing)
                 }
                 .disabled(openWith != .hover)
+                Toggle("Clicking it opens it too", isOn: $clickOpens)
+                    .disabled(openWith != .hover)
+                if openWith == .hover && !clickOpens {
+                    Text("A click on the closed island goes through to whatever is under it.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
                 Toggle("Open when dragging files toward it", isOn: $expandOnFileDrag)
                 Toggle("Shake a dragged file to bring up the Basket", isOn: $shakeBasket)
                 Toggle("Haptic tap when it opens", isOn: $haptics)

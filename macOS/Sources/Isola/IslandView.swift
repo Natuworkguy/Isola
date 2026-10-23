@@ -81,14 +81,14 @@ struct IslandView: View {
         .contentShape(shape)
         .onTapGesture {
             // A tap on a banner or card puts it away. A tap on an activity with steps shows its card; anywhere else
-            // opens the island, unless it opens by scrolling.
+            // opens the island, unless it opens by scrolling, or by hovering with clicks turned off.
             if state.banner != nil && !state.isExpanded {
                 state.dismissBanner()
             } else if peeked != nil {
                 state.dismissPeek()
             } else if !state.isExpanded, let activity = state.compactActivity, !activity.steps.isEmpty {
                 state.peekActivity(activity.id, for: 8)
-            } else if !state.isExpanded, OpenWith.current != .scroll {
+            } else if !state.isExpanded, OpenWith.clickOpens {
                 state.isExpanded = true
             }
         }

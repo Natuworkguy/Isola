@@ -77,6 +77,7 @@ sealed class IslandWindow : Window
     /// <summary>How far around the island the pointer counts as near it, in device-independent pixels.</summary>
     const double NearMargin = 12;
     bool pointerNear;
+    bool clickThrough;
     readonly WheelWatcher wheel = new();
     double scrollToOpen;
     DateTime lastScrollToOpen;
@@ -218,12 +219,13 @@ sealed class IslandWindow : Window
         island.MouseLeftButtonUp += (_, _) =>
         {
             // A click on a banner or card puts it away. A click on an activity with steps shows its card; anywhere
-            // else opens the island, unless it opens by scrolling.
+            // else opens the island, unless it opens by scrolling, or by hovering with clicks turned off.
             if (open) return;
             if (banner is not null) DismissBanner();
             else if (Activities.PeekId is not null) Activities.DismissPeek();
             else if (Activities.Compact(media.Primary?.IsPlaying == true) is { Steps.Count: > 0 } activity) Activities.Peek(activity.Id, 8);
-            else if (Settings.Current.OpenWith != OpenWith.Scroll) Expand();
+            else if (Settings.Current.OpenWith == OpenWith.Click
+                     || (Settings.Current.OpenWith == OpenWith.Hover && Settings.Current.ClickOpens)) Expand();
         };
         // Vertical swipes on a touchpad arrive as the mouse wheel. Inside the open island they only count on its top
         // edge, so lists and rows still scroll.
@@ -440,6 +442,7 @@ sealed class IslandWindow : Window
     /// </summary>
     void CheckNear()
     {
+        UpdateClickThrough();
         var s = Settings.Current;
         if (s.OpenWith == OpenWith.Click || !IsVisible)
         {
@@ -471,6 +474,25 @@ sealed class IslandWindow : Window
         else hoverTimer.Stop();
     }
 
+    /// <summary>
+    /// Opening by hovering with clicks turned off, a click on the closed island goes through to whatever is under it,
+    /// unless a banner or card is up to be put away. CheckNear tells hovering from the pointer's place, so it still
+    /// opens the island.
+    /// </summary>
+    void UpdateClickThrough()
+    {
+        var s = Settings.Current;
+        var through = !open && banner is null && Activities.PeekId is null
+            && s.OpenWith == OpenWith.Hover && !s.ClickOpens;
+        if (through == clickThrough) return;
+        var hwnd = new WindowInteropHelper(this).Handle;
+        if (hwnd == IntPtr.Zero) return;
+        clickThrough = through;
+        var style = Native.GetWindowLong(hwnd, Native.GWL_EXSTYLE);
+        Native.SetWindowLong(hwnd, Native.GWL_EXSTYLE,
+            through ? style | Native.WS_EX_TRANSPARENT : style & ~Native.WS_EX_TRANSPARENT);
+    }
+
     /// <summary>Set to open by scrolling: the wheel turned either way, or a swipe, near the closed island opens it.</summary>
     void WheelTurned(int delta)
     {
@@ -492,6 +514,7 @@ sealed class IslandWindow : Window
     {
         if (open) return;
         open = true;
+        UpdateClickThrough();
         views[tab].Shown();
         Refresh();
     }
@@ -500,6 +523,7 @@ sealed class IslandWindow : Window
     {
         if (!open) return;
         open = false;
+        UpdateClickThrough();
         SetKeyboard(false);
         views[tab].Hidden();
         Refresh();

@@ -4,6 +4,7 @@ enum Prefs {
     static let openWith = "openWith"
     static let hoverDelay = "hoverDelay"
     static let hoverArea = "hoverArea"
+    static let clickOpens = "clickOpens"
     static let expandOnFileDrag = "expandOnFileDrag"
     static let haptics = "haptics"
     static let display = "display"
@@ -52,6 +53,7 @@ enum Prefs {
                 ? OpenWith.click.rawValue : OpenWith.hover.rawValue,
             hoverDelay: 0.12,
             hoverArea: HoverArea.near.rawValue,
+            clickOpens: true,
             expandOnFileDrag: true,
             haptics: true,
             display: DisplayChoice.auto.rawValue,
@@ -140,6 +142,15 @@ enum OpenWith: String, CaseIterable, Identifiable {
     }
     static var current: OpenWith {
         OpenWith(rawValue: UserDefaults.standard.string(forKey: Prefs.openWith) ?? "") ?? .hover
+    }
+    /// Whether a click on the closed island opens it: always when it opens by clicking, never when it opens by
+    /// scrolling, and when it opens by hovering, unless that's turned off.
+    static var clickOpens: Bool {
+        switch current {
+        case .click: return true
+        case .scroll: return false
+        case .hover: return UserDefaults.standard.bool(forKey: Prefs.clickOpens)
+        }
     }
 }
 

@@ -285,11 +285,15 @@ extension NotchController {
         let point = NSEvent.mouseLocation
         trackDrag(point)
 
-        // Clicks, hovers and drops only belong to the island; everywhere else in the panel they pass through.
+        // Clicks, hovers and drops only belong to the island; everywhere else in the panel they pass through. So do
+        // clicks on the closed island when they don't open it, unless a banner or card is up to be put away: hovering
+        // is told from the pointer's place, not from mouse events, so it still opens it.
         let interactive = state.isExpanded
             ? islandRect(expanded: true).insetBy(dx: -4, dy: -4)
             : islandRect(expanded: false).insetBy(dx: -12, dy: -12)
-        let passThrough = !interactive.contains(point)
+        let clicksThrough = !state.isExpanded && OpenWith.current == .hover && !OpenWith.clickOpens
+            && state.banner == nil && state.peekID == nil
+        let passThrough = clicksThrough || !interactive.contains(point)
         if panel.ignoresMouseEvents != passThrough { panel.ignoresMouseEvents = passThrough }
 
         if !state.isExpanded,
