@@ -73,6 +73,8 @@ sealed class IslandWindow : Window
     readonly DispatcherTimer bannerTimer = new();
     readonly DispatcherTimer hudTimer = new() { Interval = TimeSpan.FromSeconds(1.6) };
     readonly DispatcherTimer fullScreenTimer = new() { Interval = TimeSpan.FromSeconds(1) };
+    Native.WinEventProc? raised;
+    IntPtr foregroundHook, restoreHook;
     readonly DispatcherTimer nearTimer = new() { Interval = TimeSpan.FromMilliseconds(50) };
     /// <summary>How far around the island the pointer counts as near it, in device-independent pixels.</summary>
     const double NearMargin = 12;
@@ -241,7 +243,8 @@ sealed class IslandWindow : Window
         leaveTimer.Tick += (_, _) => { leaveTimer.Stop(); if (!island.IsMouseOver && !pinned && !keyboardMode && !dragInside && !homeView.Editing && !heldOpen) Collapse(); };
         bannerTimer.Tick += (_, _) => { bannerTimer.Stop(); DismissBanner(); };
         hudTimer.Tick += (_, _) => { hudTimer.Stop(); hudShown = false; Refresh(); };
-        fullScreenTimer.Tick += (_, _) => CheckFullScreen();
+        // Once a second too, for whatever raises itself without coming to the front.
+        fullScreenTimer.Tick += (_, _) => { CheckFullScreen(); KeepOnTop(); };
         nearTimer.Tick += (_, _) => CheckNear();
         nearTimer.Start();
         wheel.Turned += WheelTurned;
@@ -257,10 +260,23 @@ sealed class IslandWindow : Window
             Native.SetWindowLong(hwnd, Native.GWL_EXSTYLE,
                 Native.GetWindowLong(hwnd, Native.GWL_EXSTYLE) | Native.WS_EX_TOOLWINDOW | Native.WS_EX_NOACTIVATE);
             HwndSource.FromHwnd(hwnd)?.AddHook(Hook);
+            // Whenever another window comes to the front (the taskbar, or an app that keeps itself on top), the island
+            // goes back above it. Kept in a field so the collector never takes it while Windows still calls it.
+            raised = (_, _, _, _, _, _, _) => Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(KeepOnTop));
+            foregroundHook = Native.SetWinEventHook(Native.EVENT_SYSTEM_FOREGROUND, Native.EVENT_SYSTEM_FOREGROUND,
+                IntPtr.Zero, raised, 0, 0, Native.WINEVENT_OUTOFCONTEXT | Native.WINEVENT_SKIPOWNPROCESS);
+            restoreHook = Native.SetWinEventHook(Native.EVENT_SYSTEM_MINIMIZEEND, Native.EVENT_SYSTEM_MINIMIZEEND,
+                IntPtr.Zero, raised, 0, 0, Native.WINEVENT_OUTOFCONTEXT | Native.WINEVENT_SKIPOWNPROCESS);
         };
-        IsVisibleChanged += (_, _) => UpdateBackdrop();
+        IsVisibleChanged += (_, _) => { UpdateBackdrop(); KeepOnTop(); };
         LocationChanged += (_, _) => UpdateBackdrop();
-        Closed += (_, _) => { backdrop?.Close(); wheel.Dispose(); };
+        Closed += (_, _) =>
+        {
+            if (foregroundHook != IntPtr.Zero) Native.UnhookWinEvent(foregroundHook);
+            if (restoreHook != IntPtr.Zero) Native.UnhookWinEvent(restoreHook);
+            backdrop?.Close();
+            wheel.Dispose();
+        };
         // The light on the glass follows the pointer.
         island.MouseMove += (_, e) =>
         {
@@ -412,6 +428,20 @@ sealed class IslandWindow : Window
         tabBar.SetTabs(tabs, tab);
         SelectTab(tab, false);
         Refresh();
+    }
+
+    /// <summary>
+    /// Puts the island back at the top of the always-on-top windows, without taking the focus, and its blur just under
+    /// it. Only the Start menu and the like, which Windows keeps above every app, still come over it.
+    /// </summary>
+    void KeepOnTop()
+    {
+        if (!IsVisible) return;
+        var hwnd = new WindowInteropHelper(this).Handle;
+        if (hwnd == IntPtr.Zero) return;
+        Native.SetWindowPos(hwnd, Native.HWND_TOPMOST, 0, 0, 0, 0,
+            Native.SWP_NOMOVE | Native.SWP_NOSIZE | Native.SWP_NOACTIVATE | Native.SWP_NOOWNERZORDER);
+        UpdateBackdrop();
     }
 
     void CheckFullScreen()

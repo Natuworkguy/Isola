@@ -74,6 +74,17 @@ static class Native
     public static extern int SHGetKnownFolderPath([MarshalAs(UnmanagedType.LPStruct)] Guid id, uint flags, IntPtr token, out string path);
     public static readonly Guid Downloads = new("374DE290-123F-4565-9164-39C4925E467B");
 
+    // Keeping the island above every other always-on-top window: Windows puts the last one raised on top, so a
+    // taskbar click or another such app would otherwise cover it.
+    public static readonly IntPtr HWND_TOPMOST = new(-1);
+    public const uint SWP_NOSIZE = 0x0001, SWP_NOMOVE = 0x0002, SWP_NOOWNERZORDER = 0x0200;
+    public const uint EVENT_SYSTEM_FOREGROUND = 0x0003, EVENT_SYSTEM_MINIMIZEEND = 0x0017;
+    public const uint WINEVENT_OUTOFCONTEXT = 0x0000, WINEVENT_SKIPOWNPROCESS = 0x0002;
+    public delegate void WinEventProc(IntPtr hook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint thread, uint time);
+    [DllImport("user32.dll")]
+    public static extern IntPtr SetWinEventHook(uint eventMin, uint eventMax, IntPtr module, WinEventProc proc, uint process, uint thread, uint flags);
+    [DllImport("user32.dll")] public static extern bool UnhookWinEvent(IntPtr hook);
+
     // The blur behind the island's glass (GlassBackdrop).
     public const int WS_EX_TRANSPARENT = 0x00000020;
     public const uint SWP_NOACTIVATE = 0x0010, SWP_SHOWWINDOW = 0x0040;
