@@ -13,6 +13,7 @@ using System.Windows.Media.Effects;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 using Isola.Services;
+using NAudio.CoreAudioApi;
 
 namespace Isola.Views;
 
@@ -53,6 +54,7 @@ static class HomeWidgetCatalog
         new("dice", "Dice", "", C(89, 217, 140), C(26, 140, 102)),
         new("counter", "Counter", "", C(255, 115, 179), C(217, 51, 128)),
         new("colors", "Color Picker", "\uEF3C", C(255, 153, 51), C(140, 77, 242)),
+        new("mixer", "Volume Mixer", Ui.Volume, C(255, 128, 64), C(204, 51, 102), Wide: true),
     };
 
     /// <summary>A thin line between widgets. There can be any number, each placed one numbered: separator-1, -2 and so on.</summary>
@@ -274,6 +276,7 @@ sealed class HomeView : ITabView
             "moon" => new MoonWidget(),
             "dice" => new DiceWidget(),
             "colors" => new ColorPickerWidget(),
+            "mixer" => new MixerWidget(),
             _ => new CounterWidget(),
         };
         var slot = new Slot(info, widget, () => Remove(id));
@@ -2086,6 +2089,161 @@ sealed class HomeView : ITabView
         {
             number.Text = Settings.Current.HomeCounter.ToString();
             reset.Opacity = Settings.Current.HomeCounter == 0 ? 0.3 : 1;
+        }
+    }
+
+    /// <summary>
+    /// A volume slider for every app playing sound, so the music can go down without touching the call. Clicking an
+    /// app's icon mutes it. The apps are looked at again every two seconds; a slider being dragged is left alone.
+    /// </summary>
+    sealed class MixerWidget : Widget
+    {
+        const int MostRows = 3;
+        readonly Grid root = new();
+        readonly List<Row> rows = new();
+        MMDeviceEnumerator? enumerator;
+        string shownKey = "\0";
+        int ticks;
+
+        public override FrameworkElement Root => root;
+
+        sealed class Row
+        {
+            public required AudioSessionControl Session;
+            public required Bar Level;
+            public required TextBlock Icon;
+            public bool Dragging;
+        }
+
+        public override void Refresh()
+        {
+            ticks = 0;
+            Look();
+        }
+
+        public override void Tick()
+        {
+            if (++ticks % 10 == 0) Look();
+        }
+
+        static (uint Id, string Name, string? File) Who(AudioSessionControl session)
+        {
+            var id = session.GetProcessID;
+            try
+            {
+                using var process = Process.GetProcessById((int)id);
+                string? file = null;
+                try { file = process.MainModule?.FileName; } catch { }
+                var name = file is null ? null : FileVersionInfo.GetVersionInfo(file).FileDescription;
+                return (id, string.IsNullOrWhiteSpace(name) ? process.ProcessName : name!, file);
+            }
+            catch
+            {
+                return (id, string.IsNullOrWhiteSpace(session.DisplayName) ? "App" : session.DisplayName, null);
+            }
+        }
+
+        void Look()
+        {
+            if (rows.Any(r => r.Dragging)) return;
+            List<AudioSessionControl> sessions;
+            try
+            {
+                enumerator ??= new MMDeviceEnumerator();
+                var device = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+                device.AudioSessionManager.RefreshSessions();
+                var all = device.AudioSessionManager.Sessions;
+                sessions = Enumerable.Range(0, all.Count).Select(i => all[i])
+                    .Where(x => !x.IsSystemSoundsSession && x.State != NAudio.CoreAudioApi.Interfaces.AudioSessionState.AudioSessionStateExpired)
+                    .OrderBy(x => x.State == NAudio.CoreAudioApi.Interfaces.AudioSessionState.AudioSessionStateActive ? 0 : 1)
+                    .Take(MostRows).ToList();
+            }
+            catch
+            {
+                sessions = new List<AudioSessionControl>();
+            }
+
+            var key = string.Join("|", sessions.Select(x => x.GetProcessID));
+            if (key != shownKey)
+            {
+                shownKey = key;
+                Build(sessions);
+            }
+            foreach (var row in rows) Show(row);
+        }
+
+        void Build(List<AudioSessionControl> sessions)
+        {
+            root.Children.Clear();
+            rows.Clear();
+            if (sessions.Count == 0)
+            {
+                root.Children.Add(Hint(Ui.Volume, "Nothing playing", "Apps making sound show up here."));
+                return;
+            }
+            var stack = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+            foreach (var session in sessions)
+            {
+                var (_, name, file) = Who(session);
+                var line = new DockPanel { Margin = new Thickness(0, 4, 0, 4) };
+                var picture = file is null ? null : FileActions.IconFor(file);
+                FrameworkElement icon = picture is null
+                    ? Ui.Glyph(Ui.Volume, 14, Ui.White(0.8))
+                    : new Image { Source = picture, Width = 18, Height = 18 };
+                var mute = Ui.Glyph(Ui.Mute, 10, Ui.Brush(Ui.Rgb(255, 69, 58)));
+                var badge = new Grid { Width = 22, Height = 22, Cursor = Cursors.Hand, Margin = new Thickness(0, 0, 8, 0) };
+                badge.Children.Add(icon);
+                mute.HorizontalAlignment = HorizontalAlignment.Right;
+                mute.VerticalAlignment = VerticalAlignment.Bottom;
+                badge.Children.Add(mute);
+                DockPanel.SetDock(badge, Dock.Left);
+                line.Children.Add(badge);
+
+                var text = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+                text.Children.Add(Ui.Label(name, 10.5, FontWeights.SemiBold, 0.85));
+                var level = new Bar(Brushes.White, 5) { Margin = new Thickness(0, 4, 0, 0) };
+                var track = new Grid { Background = Brushes.Transparent, Height = 13, Cursor = Cursors.Hand };
+                track.Children.Add(level);
+                text.Children.Add(track);
+                line.Children.Add(text);
+                stack.Children.Add(line);
+
+                var row = new Row { Session = session, Level = level, Icon = mute };
+                rows.Add(row);
+                badge.MouseLeftButtonUp += (_, e) =>
+                {
+                    e.Handled = true;
+                    try { session.SimpleAudioVolume.Mute = !session.SimpleAudioVolume.Mute; } catch { }
+                    Show(row);
+                };
+                void Set(Point at)
+                {
+                    var fraction = Math.Clamp(at.X / Math.Max(track.ActualWidth, 1), 0, 1);
+                    try
+                    {
+                        session.SimpleAudioVolume.Volume = (float)fraction;
+                        if (fraction > 0 && session.SimpleAudioVolume.Mute) session.SimpleAudioVolume.Mute = false;
+                    }
+                    catch { }
+                    Show(row);
+                }
+                track.MouseLeftButtonDown += (_, e) => { e.Handled = true; row.Dragging = true; track.CaptureMouse(); Set(e.GetPosition(track)); };
+                track.MouseMove += (_, e) => { if (row.Dragging) Set(e.GetPosition(track)); };
+                track.MouseLeftButtonUp += (_, e) => { e.Handled = true; row.Dragging = false; track.ReleaseMouseCapture(); };
+                track.LostMouseCapture += (_, _) => row.Dragging = false;
+            }
+            root.Children.Add(stack);
+        }
+
+        static void Show(Row row)
+        {
+            try
+            {
+                var muted = row.Session.SimpleAudioVolume.Mute;
+                row.Level.Set(muted ? 0 : row.Session.SimpleAudioVolume.Volume);
+                row.Icon.Visibility = muted ? Visibility.Visible : Visibility.Collapsed;
+            }
+            catch { }
         }
     }
 }
