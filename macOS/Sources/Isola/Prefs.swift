@@ -40,6 +40,7 @@ enum Prefs {
     static let liveDiskSpace = "live.diskSpace"
     static let liveFocus = "live.focus"
     static let activityLinks = "activityLinks"
+    static let activitiesOnly = "activitiesOnly"
     static let gestures = "gestures"
     static let hotKey = "hotKey"
     static let floatingPlayer = "floatingPlayer"
@@ -54,6 +55,7 @@ enum Prefs {
             hoverDelay: 0.12,
             hoverArea: HoverArea.near.rawValue,
             clickOpens: true,
+            activitiesOnly: false,
             expandOnFileDrag: true,
             haptics: true,
             display: DisplayChoice.auto.rawValue,
@@ -148,6 +150,13 @@ enum OpenWith: String, CaseIterable, Identifiable {
     static var clickOpens: Bool {
         current == .click || UserDefaults.standard.bool(forKey: Prefs.clickOpens)
     }
+}
+
+/// Live Activities only: the island never opens, by any means, and shows
+/// nothing but Live Activities (and banners) as they come and go, hidden
+/// in between. A quiet companion for the notch.
+enum ActivitiesOnly {
+    static var on: Bool { UserDefaults.standard.bool(forKey: Prefs.activitiesOnly) }
 }
 
 /// How close the pointer has to come for the island to open.

@@ -122,10 +122,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         entry.target = self
     }
 
-    @objc private func toggleIsland() { withAnimation { AppState.shared.isExpanded.toggle() } }
+    @objc private func toggleIsland() {
+        guard !ActivitiesOnly.on else { return }
+        withAnimation { AppState.shared.isExpanded.toggle() }
+    }
 
     @objc private func togglePin() {
         let state = AppState.shared
+        guard !ActivitiesOnly.on else { return }
         state.isPinned.toggle()
         if state.isPinned { withAnimation { state.isExpanded = true } }
     }

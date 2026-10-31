@@ -223,7 +223,8 @@ final class NotchController {
         state.notchGap = notchWidth
         state.collapsedSize = shown
         state.contentTopInset = hardware ? collapsed.height + 2 : (floating ? 14 : idleHeight + 4)
-        state.hiddenWhenIdle = !hardware && hideIdle && !activity && !bannerActive && !hudActive && state.peekID == nil
+        state.hiddenWhenIdle = (!hardware && hideIdle || ActivitiesOnly.on)
+            && !activity && !bannerActive && !hudActive && state.peekID == nil
         state.useGlass = IslandMaterial(rawValue: defaults.string(forKey: Prefs.material) ?? "") != .solid
         state.tintFromArt = defaults.bool(forKey: Prefs.artTint)
 
@@ -286,7 +287,8 @@ extension NotchController {
     /// to be put away. Hovering is told from the pointer's place and scrolling is watched from outside, so either
     /// still opens it.
     fileprivate var clicksThrough: Bool {
-        !state.isExpanded && !OpenWith.clickOpens && state.banner == nil && state.peekID == nil
+        !state.isExpanded && (!OpenWith.clickOpens || ActivitiesOnly.on && state.compactActivity == nil)
+            && state.banner == nil && state.peekID == nil
     }
 
     fileprivate func tick() {
@@ -371,6 +373,7 @@ extension NotchController {
 
     fileprivate func open(tab: IslandTab?) {
         hoverSince = nil
+        guard !ActivitiesOnly.on else { return }
         if let tab, state.enabledTabs.contains(tab) { state.tab = tab }
         withAnimation { state.isExpanded = true }
         if defaults.bool(forKey: Prefs.haptics) {
@@ -380,6 +383,7 @@ extension NotchController {
 
     /// Opens or closes the island from the keyboard shortcut.
     func toggleFromKeyboard() {
+        guard !ActivitiesOnly.on else { return }
         if state.isExpanded {
             state.heldOpen = false
             withAnimation { state.isExpanded = false }

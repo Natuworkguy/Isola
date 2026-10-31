@@ -88,7 +88,7 @@ struct IslandView: View {
                 state.dismissPeek()
             } else if !state.isExpanded, let activity = state.compactActivity, !activity.steps.isEmpty {
                 state.peekActivity(activity.id, for: 8)
-            } else if !state.isExpanded, OpenWith.clickOpens {
+            } else if !state.isExpanded, OpenWith.clickOpens, !ActivitiesOnly.on {
                 state.isExpanded = true
             }
         }

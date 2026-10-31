@@ -85,6 +85,7 @@ struct IslandSettings: View {
     @AppStorage(Prefs.clipboardLimit) private var clipboardLimit = 50
     @AppStorage(Prefs.notifyLinks) private var notifyLinks = true
     @AppStorage(Prefs.activityLinks) private var activityLinks = true
+    @AppStorage(Prefs.activitiesOnly) private var activitiesOnly = false
     @AppStorage(Prefs.liveVolume) private var liveVolume = true
     @AppStorage(Prefs.liveBrightness) private var liveBrightness = true
     @AppStorage(Prefs.hideSystemHUD) private var hideSystemHUD = true
@@ -97,13 +98,20 @@ struct IslandSettings: View {
     var body: some View {
         Form {
             Section("Opening") {
+                Toggle("Live Activities only", isOn: $activitiesOnly)
+                Text(activitiesOnly
+                     ? "The island never opens. It shows Live Activities and banners as they happen, and nothing in between."
+                     : "Turn on to never open the island, and only show Live Activities and banners.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 Picker("Open the island by", selection: $openWith) {
                     ForEach(OpenWith.allCases) { Text($0.title).tag($0) }
                 }
+                .disabled(activitiesOnly)
                 Picker("Open when the pointer is", selection: $hoverArea) {
                     ForEach(HoverArea.allCases) { Text($0.title).tag($0) }
                 }
-                .disabled(openWith == .click)
+                .disabled(openWith == .click || activitiesOnly)
                 HStack {
                     Text("Hover delay")
                     Slider(value: $hoverDelay, in: 0...0.6, step: 0.02)
@@ -112,9 +120,9 @@ struct IslandSettings: View {
                         .foregroundStyle(.secondary)
                         .frame(width: 52, alignment: .trailing)
                 }
-                .disabled(openWith != .hover)
+                .disabled(openWith != .hover || activitiesOnly)
                 Toggle("Clicking it opens it too", isOn: $clickOpens)
-                    .disabled(openWith == .click)
+                    .disabled(openWith == .click || activitiesOnly)
                 if openWith != .click && !clickOpens {
                     Text("A click on the closed island goes through to whatever is under it.")
                         .font(.caption)

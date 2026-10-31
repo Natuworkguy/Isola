@@ -355,6 +355,7 @@ sealed class IslandWindow : Window
 
     void ToggleFromKeyboard()
     {
+        if (Settings.Current.ActivitiesOnly) return;
         if (open)
         {
             heldOpen = false;
@@ -512,7 +513,7 @@ sealed class IslandWindow : Window
     {
         var s = Settings.Current;
         var through = !open && banner is null && Activities.PeekId is null
-            && s.OpenWith != OpenWith.Click && !s.ClickOpens;
+            && (s.OpenWith != OpenWith.Click && !s.ClickOpens || s.ActivitiesOnly && Activities.Compact(false) is null);
         if (through == clickThrough) return;
         var hwnd = new WindowInteropHelper(this).Handle;
         if (hwnd == IntPtr.Zero) return;
@@ -541,7 +542,7 @@ sealed class IslandWindow : Window
 
     public void Expand()
     {
-        if (open) return;
+        if (open || Settings.Current.ActivitiesOnly) return;
         open = true;
         UpdateClickThrough();
         views[tab].Shown();
@@ -733,7 +734,8 @@ sealed class IslandWindow : Window
         Ui.FadeTo(glow, glowOn ? 1 : 0, 500);
         glow.IsHitTestVisible = false;
 
-        var hidden = mode == Mode.Idle && Settings.Current.HideWhenIdle && !island.IsMouseOver;
+        var hidden = mode == Mode.Idle
+            && (Settings.Current.ActivitiesOnly || Settings.Current.HideWhenIdle && !island.IsMouseOver);
         island.Opacity = 1;
         canvas.Opacity = hidden ? 0.02 : 1;
         UpdateBackdrop();

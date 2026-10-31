@@ -159,6 +159,8 @@ sealed class SettingsWindow : Window
     {
         var s = Settings.Current;
         Section("Opening",
+            Row("Live Activities only", Switch(s.ActivitiesOnly, v => s.ActivitiesOnly = v)),
+            Caption("On, the island never opens: it shows Live Activities and banners as they happen, and nothing in between."),
             Row("Open the island by", Picker(new[] { "Hovering over it", "Clicking it", "Scrolling over it" }, (int)s.OpenWith, i => s.OpenWith = (OpenWith)i)),
             Row("Open when the pointer is", Picker(new[] { "Near the island", "On the island" }, (int)s.HoverArea, i => s.HoverArea = (HoverArea)i)),
             SliderRow("Hover delay", s.HoverDelay, 0, 0.6, 0.02, v => s.HoverDelay = v, v => $"{v:0.00}s"),

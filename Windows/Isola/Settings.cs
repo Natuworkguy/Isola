@@ -34,6 +34,8 @@ public sealed class Settings
     /// With Hover or Scroll: whether a click on the closed island opens it too. Off, clicks go through it.
     /// </summary>
     public bool ClickOpens { get; set; } = true;
+    /// <summary>Live Activities only: the island never opens, and shows only Live Activities and banners.</summary>
+    public bool ActivitiesOnly { get; set; } = false;
     public bool ExpandOnFileDrag { get; set; } = true;
     public bool ShakeBasket { get; set; } = true;
 
