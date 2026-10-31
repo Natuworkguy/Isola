@@ -86,6 +86,7 @@ struct IslandSettings: View {
     @AppStorage(Prefs.notifyLinks) private var notifyLinks = true
     @AppStorage(Prefs.activityLinks) private var activityLinks = true
     @AppStorage(Prefs.activitiesOnly) private var activitiesOnly = false
+    @AppStorage(Prefs.lockScreen) private var lockScreen = true
     @AppStorage(Prefs.liveVolume) private var liveVolume = true
     @AppStorage(Prefs.liveBrightness) private var liveBrightness = true
     @AppStorage(Prefs.hideSystemHUD) private var hideSystemHUD = true
@@ -185,6 +186,10 @@ struct IslandSettings: View {
                 Text(verbatim: "open -g \"isola://activity?id=build&title=Build&steps=done:Fetch|active:Compile|todo:Test\"\nopen -g \"isola://activity/end?id=build\"")
                     .font(.system(.caption, design: .monospaced))
                     .textSelection(.enabled)
+                Toggle("Show them on the lock screen", isOn: $lockScreen)
+                Text("While the Mac is locked, each one (like Flash at work) is a quiet notification that updates as it goes, and says when it finished. Unlocking clears them.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section("Clipboard") {

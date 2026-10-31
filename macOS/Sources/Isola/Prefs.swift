@@ -41,6 +41,7 @@ enum Prefs {
     static let liveFocus = "live.focus"
     static let activityLinks = "activityLinks"
     static let activitiesOnly = "activitiesOnly"
+    static let lockScreen = "lockScreen"
     static let gestures = "gestures"
     static let hotKey = "hotKey"
     static let floatingPlayer = "floatingPlayer"
@@ -56,6 +57,7 @@ enum Prefs {
             hoverArea: HoverArea.near.rawValue,
             clickOpens: true,
             activitiesOnly: false,
+            lockScreen: true,
             expandOnFileDrag: true,
             haptics: true,
             display: DisplayChoice.auto.rawValue,

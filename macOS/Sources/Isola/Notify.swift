@@ -136,6 +136,8 @@ enum ActivityLink {
     static let maxActivities = 8
     private static var updated: [String: Date] = [:]
     private static var sweeper: Timer?
+    /// The activities other apps keep going through links (Flash, through flash-isola), as the lock screen shows.
+    static var ids: Set<String> { Set(updated.keys) }
 
     static func handle(_ url: URL) {
         guard UserDefaults.standard.bool(forKey: Prefs.activityLinks) else { return }
