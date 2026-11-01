@@ -1,4 +1,4 @@
-import Foundation
+import AppKit
 
 enum Prefs {
     static let openWith = "openWith"
@@ -9,6 +9,7 @@ enum Prefs {
     static let haptics = "haptics"
     static let display = "display"
     static let style = "style"
+    static let appleIsland = "appleIsland"
     static let material = "material"
     static let idleBehavior = "idleBehavior"
     static let idleWidth = "idleWidth"
@@ -62,6 +63,7 @@ enum Prefs {
             haptics: true,
             display: DisplayChoice.auto.rawValue,
             style: IslandStyle.auto.rawValue,
+            appleIsland: AppleIsland.auto.rawValue,
             material: IslandMaterial.glass.rawValue,
             idleBehavior: IdleBehavior.visible.rawValue,
             idleWidth: 150.0,
@@ -124,6 +126,50 @@ enum IslandStyle: String, CaseIterable, Identifiable {
         case .notch: return "Attached to the top edge"
         case .floating: return "Floating capsule in the menu bar"
         }
+    }
+}
+
+/// MacBooks from late 2026 have Apple's own Dynamic Island: a small camera cutout in place of the notch, that macOS
+/// draws an island around. There, Isola's island is a capsule around the cutout, the same shape as Apple's, and with
+/// nothing to show it gets out of the way, so Apple's is the one you see.
+enum AppleIsland: String, CaseIterable, Identifiable {
+    case auto, yes, no
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .auto: return "Automatic"
+        case .yes: return "Yes"
+        case .no: return "No"
+        }
+    }
+
+    /// A cutout this much narrower than a notch is Apple's island's: a notch is about 180 points wide.
+    static let widestCutout: CGFloat = 150
+
+    static var current: AppleIsland {
+        AppleIsland(rawValue: UserDefaults.standard.string(forKey: Prefs.appleIsland) ?? "") ?? .auto
+    }
+
+    /// Whether SCREEN has Apple's island, as set, or as its shape says.
+    static func on(_ screen: NSScreen) -> Bool {
+        switch current {
+        case .yes: return screen.safeAreaInsets.top > 0 || screen == NSScreen.screens.first
+        case .no: return false
+        case .auto:
+            guard ProcessInfo.processInfo.isOperatingSystemAtLeast(
+                OperatingSystemVersion(majorVersion: 27, minorVersion: 0, patchVersion: 0)),
+                screen.safeAreaInsets.top > 0,
+                let left = screen.auxiliaryTopLeftArea, let right = screen.auxiliaryTopRightArea
+            else { return false }
+            let cutout = screen.frame.width - left.width - right.width
+            return cutout > 0 && cutout < widestCutout
+        }
+    }
+
+    /// The width of SCREEN's camera cutout, or 0.
+    static func cutout(_ screen: NSScreen) -> CGFloat {
+        guard let left = screen.auxiliaryTopLeftArea, let right = screen.auxiliaryTopRightArea else { return 0 }
+        return max(0, screen.frame.width - left.width - right.width)
     }
 }
 

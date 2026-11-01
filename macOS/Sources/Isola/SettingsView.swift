@@ -26,6 +26,7 @@ struct DisplaySettings: View {
     @AppStorage(Prefs.idleWidth) private var idleWidth = 150.0
     @AppStorage(Prefs.idleHeight) private var idleHeight = 30.0
     @AppStorage(Prefs.floatingGap) private var floatingGap = 3.0
+    @AppStorage(Prefs.appleIsland) private var appleIsland = AppleIsland.auto
     @AppStorage(Prefs.menuOverhang) private var menuOverhang = 8.0
 
     var body: some View {
@@ -37,6 +38,12 @@ struct DisplaySettings: View {
                 Picker("Style", selection: $style) {
                     ForEach(IslandStyle.allCases) { Text($0.title).tag($0) }
                 }
+                Picker("This Mac has Apple's Dynamic Island", selection: $appleIsland) {
+                    ForEach(AppleIsland.allCases) { Text($0.title).tag($0) }
+                }
+                Text("On a MacBook with Apple's own Dynamic Island, Isola's island goes round its camera as a capsule, the same shape, and keeps out of sight when it has nothing to show, so Apple's is the one you see. Automatic tells it by the camera cutout's size.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section("Look") {

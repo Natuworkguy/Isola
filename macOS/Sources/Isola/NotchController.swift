@@ -178,12 +178,16 @@ final class NotchController {
         if state.isExpanded, let current = currentScreen, NSScreen.screens.contains(current) { screen = current }
         currentScreen = screen
 
-        let notched = hasNotch(screen)
+        // Apple's own island: Isola's goes round its cutout as a capsule, never as a notch.
+        let apple = AppleIsland.on(screen)
+        let notched = hasNotch(screen) && !apple
         let style = IslandStyle(rawValue: defaults.string(forKey: Prefs.style) ?? "") ?? .auto
-        let floating = style == .floating || (style == .auto && !notched)
+        let floating = apple || style == .floating || (style == .auto && !notched)
         let hardware = notched && !floating
 
-        let idleWidth = max(CGFloat(defaults.double(forKey: Prefs.idleWidth)), 60)
+        // Wide enough that the camera sits inside it, as in Apple's.
+        let idleWidth = max(CGFloat(defaults.double(forKey: Prefs.idleWidth)), 60,
+                            apple ? AppleIsland.cutout(screen) + 28 : 0)
         let idleHeight = max(CGFloat(defaults.double(forKey: Prefs.idleHeight)), 20)
         let activity = state.hasLiveActivity
         let hudActive = state.hud != nil
@@ -226,7 +230,9 @@ final class NotchController {
         state.notchGap = notchWidth
         state.collapsedSize = shown
         state.contentTopInset = hardware ? collapsed.height + 2 : (floating ? 14 : idleHeight + 4)
-        state.hiddenWhenIdle = (!hardware && hideIdle || ActivitiesOnly.on)
+        // With nothing to show, Apple's island is the one to see.
+        let nothing = !activity && !hudActive && !bannerActive && state.peekedActivity == nil
+        state.hiddenWhenIdle = (!hardware && hideIdle || ActivitiesOnly.on || apple && nothing)
             && !activity && !bannerActive && !hudActive && state.peekID == nil
         state.useGlass = IslandMaterial(rawValue: defaults.string(forKey: Prefs.material) ?? "") != .solid
         state.tintFromArt = defaults.bool(forKey: Prefs.artTint)
