@@ -6,7 +6,7 @@ import UserNotifications
 /// there, but notifications show, so while the screen is locked each such activity is one quiet notification, updated
 /// in place as it goes: what it is doing, the step it is on, how far along. When it ends, its notification says so
 /// and stays; unlocking clears them all, since the island is back.
-final class LockScreen: NSObject {
+final class LockScreen: NSObject, ObservableObject {
     static let shared = LockScreen()
 
     private static let prefix = "isola.lock."
@@ -17,6 +17,8 @@ final class LockScreen: NSObject {
     private var watching: AnyCancellable?
     private var shown: [String: (body: String, step: String, at: Date, title: String)] = [:]
     private var asked = false
+    /// Whether notifications are allowed, as Settings shows it: nil until known.
+    @Published private(set) var allowed: Bool?
 
     private var enabled: Bool { UserDefaults.standard.bool(forKey: Prefs.lockScreen) }
     private var center: UNUserNotificationCenter { .current() }
@@ -24,6 +26,9 @@ final class LockScreen: NSObject {
     func start() {
         // Notifications need a real app bundle; run from `swift run` there is none.
         guard Bundle.main.bundleIdentifier != nil else { return }
+        // Shown even while Isola is the app in front, as when its Settings are open: macOS keeps an app's own
+        // notifications to itself then, unless it says otherwise.
+        center.delegate = self
         let system = DistributedNotificationCenter.default()
         system.addObserver(self, selector: #selector(didLock),
                            name: .init("com.apple.screenIsLocked"), object: nil)
@@ -32,6 +37,32 @@ final class LockScreen: NSObject {
         watching = AppState.shared.$activities
             .receive(on: RunLoop.main)
             .sink { [weak self] in self?.changed($0) }
+        // Asked as Isola starts, with the Mac in use: not when the first activity comes, which may be just before
+        // the screen locks, with the question waiting unseen behind it.
+        if enabled { askOnce() } else { check() }
+    }
+
+    /// What the Mac lets Isola do now, for Settings.
+    func check() {
+        center.getNotificationSettings { settings in
+            let ok = settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional
+            DispatchQueue.main.async { self.allowed = ok }
+        }
+    }
+
+    /// A sample on screen now, the way the lock screen shows one: to see that it works, and to ask first if needed.
+    func tryIt() {
+        askOnce(force: true) { [weak self] in
+            self?.post(id: "sample", title: "Flash", body: "Step 2 of 4: Run the tests", first: true)
+        }
+    }
+
+    /// System Settings, at Isola's notifications.
+    func openSystemSettings() {
+        let id = Bundle.main.bundleIdentifier ?? ""
+        let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension?id=\(id)")
+            ?? URL(string: "x-apple.systempreferences:com.apple.preference.notifications")!
+        NSWorkspace.shared.open(url)
     }
 
     @objc private func didLock() {
@@ -66,13 +97,13 @@ final class LockScreen: NSObject {
                 if last.step == step && Date().timeIntervalSince(last.at) < Self.minimumGap { continue }
             }
             let title = activity.title.isEmpty ? "Live Activity" : activity.title
-            post(id: activity.id, title: title, body: body)
+            post(id: activity.id, title: title, body: body, first: shown[activity.id] == nil)
             shown[activity.id] = (body, step, Date(), title)
         }
         // Ended while locked: its notification says it finished, and stays until unlock.
         for id in shown.keys where !linked.contains(where: { $0.id == id }) {
             if let last = shown[id], last.body != Self.finished {
-                post(id: id, title: last.title, body: Self.finished)
+                post(id: id, title: last.title, body: Self.finished, first: false)
                 shown[id] = (Self.finished, "", Date(), last.title)
             }
         }
@@ -105,23 +136,40 @@ final class LockScreen: NSObject {
         return parts.isEmpty ? "Working" : parts.joined(separator: "\n")
     }
 
-    private func post(id: String, title: String, body: String) {
+    /// FIRST is its first notification: shown as notifications usually are, since a quiet ("passive") one may not
+    /// show on the lock screen at all. Its updates replace it in place, quietly.
+    private func post(id: String, title: String, body: String, first: Bool) {
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = body
         content.threadIdentifier = "isola.activities"
         content.sound = nil
-        content.interruptionLevel = .passive
+        content.interruptionLevel = first ? .active : .passive
         let request = UNNotificationRequest(identifier: Self.prefix + id, content: content, trigger: nil)
         center.add(request)
     }
 
-    private func askOnce() {
-        guard !asked else { return }
+    private func askOnce(force: Bool = false, then: (() -> Void)? = nil) {
+        guard force || !asked else { return }
         asked = true
         center.getNotificationSettings { settings in
-            guard settings.authorizationStatus == .notDetermined else { return }
-            UNUserNotificationCenter.current().requestAuthorization(options: [.alert]) { _, _ in }
+            guard settings.authorizationStatus == .notDetermined else {
+                self.check()
+                DispatchQueue.main.async { then?() }
+                return
+            }
+            UNUserNotificationCenter.current().requestAuthorization(options: [.alert]) { _, _ in
+                self.check()
+                DispatchQueue.main.async { then?() }
+            }
         }
+    }
+}
+
+extension LockScreen: UNUserNotificationCenterDelegate {
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification,
+                                withCompletionHandler completionHandler:
+                                @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.banner, .list])
     }
 }

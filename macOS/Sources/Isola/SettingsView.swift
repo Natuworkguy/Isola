@@ -87,6 +87,7 @@ struct IslandSettings: View {
     @AppStorage(Prefs.activityLinks) private var activityLinks = true
     @AppStorage(Prefs.activitiesOnly) private var activitiesOnly = false
     @AppStorage(Prefs.lockScreen) private var lockScreen = true
+    @ObservedObject private var lock = LockScreen.shared
     @AppStorage(Prefs.liveVolume) private var liveVolume = true
     @AppStorage(Prefs.liveBrightness) private var liveBrightness = true
     @AppStorage(Prefs.hideSystemHUD) private var hideSystemHUD = true
@@ -187,9 +188,25 @@ struct IslandSettings: View {
                     .font(.system(.caption, design: .monospaced))
                     .textSelection(.enabled)
                 Toggle("Show them on the lock screen", isOn: $lockScreen)
-                Text("While the Mac is locked, each one (like Flash at work) is a quiet notification that updates as it goes, and says when it finished. Unlocking clears them.")
+                Text("While the Mac is locked, each one (like Flash at work) is a notification that updates as it goes, and says when it finished. Unlocking clears them.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                if lockScreen {
+                    HStack {
+                        if lock.allowed == false {
+                            Label("Notifications are off for Isola, so nothing can show while locked.",
+                                  systemImage: "exclamationmark.triangle")
+                                .font(.caption)
+                                .foregroundStyle(.orange)
+                            Spacer()
+                            Button("Open System Settings") { lock.openSystemSettings() }
+                        } else {
+                            Spacer()
+                            Button("Try it") { lock.tryIt() }
+                                .help("Shows one now, as the lock screen would")
+                        }
+                    }
+                }
             }
 
             Section("Clipboard") {
@@ -200,6 +217,7 @@ struct IslandSettings: View {
             }
         }
         .formStyle(.grouped)
+        .onAppear { lock.check() }
     }
 }
 
