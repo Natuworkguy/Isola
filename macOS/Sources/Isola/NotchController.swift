@@ -136,6 +136,9 @@ final class NotchController {
 
         scrollMonitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { [weak self] event in
             guard let self else { return event }
+            // Only the island's own: a scroll in Settings, or any other of Isola's windows, is that window's to
+            // scroll, not a swipe that opens the island.
+            guard event.window === self.panel else { return event }
             return self.handleScroll(event) ? nil : event
         }
         // Scrolls next to the island go to the app underneath, so they are watched from outside too: set to open by
