@@ -201,10 +201,20 @@ struct IslandSettings: View {
                             Spacer()
                             Button("Open System Settings") { lock.openSystemSettings() }
                         } else {
+                            Text(lock.trying ? "Lock your Mac now (Control-Command-Q): one shows in a few seconds."
+                                 : "Shows one in a few seconds: lock your Mac to see it there.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
                             Spacer()
                             Button("Try it") { lock.tryIt() }
-                                .help("Shows one now, as the lock screen would")
+                                .disabled(lock.trying)
                         }
+                    }
+                    if !lock.lastSeen.isEmpty {
+                        Text(lock.lastSeen)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
                     }
                 }
             }

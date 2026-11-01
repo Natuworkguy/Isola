@@ -19,6 +19,10 @@ final class LockScreen: NSObject, ObservableObject {
     private var asked = false
     /// Whether notifications are allowed, as Settings shows it: nil until known.
     @Published private(set) var allowed: Bool?
+    /// What happened last, as Settings shows it: the lock seen, the notification shown, or why macOS refused it.
+    @Published private(set) var lastSeen = ""
+    /// Whether Try it is waiting for the Mac to be locked.
+    @Published private(set) var trying = false
 
     private var enabled: Bool { UserDefaults.standard.bool(forKey: Prefs.lockScreen) }
     private var center: UNUserNotificationCenter { .current() }
@@ -50,10 +54,15 @@ final class LockScreen: NSObject, ObservableObject {
         }
     }
 
-    /// A sample on screen now, the way the lock screen shows one: to see that it works, and to ask first if needed.
+    /// A sample, a few seconds from now: time to lock the Mac and see it there, as Flash's progress would be.
     func tryIt() {
+        trying = true
         askOnce(force: true) { [weak self] in
-            self?.post(id: "sample", title: "Flash", body: "Step 2 of 4: Run the tests", first: true)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 6) {
+                guard let self else { return }
+                self.trying = false
+                self.post(id: "sample", title: "Flash", body: "Step 2 of 4: Run the tests", first: true)
+            }
         }
     }
 
@@ -67,7 +76,13 @@ final class LockScreen: NSObject, ObservableObject {
 
     @objc private func didLock() {
         locked = true
+        let count = AppState.shared.activities.filter { ActivityLink.ids.contains($0.id) }.count
+        lastSeen = "Saw the Mac lock at \(Self.time()), with \(count) activit\(count == 1 ? "y" : "ies") from apps."
         changed(AppState.shared.activities)
+    }
+
+    private static func time() -> String {
+        Date().formatted(date: .omitted, time: .standard)
     }
 
     @objc private func didUnlock() {
@@ -146,7 +161,16 @@ final class LockScreen: NSObject, ObservableObject {
         content.sound = nil
         content.interruptionLevel = first ? .active : .passive
         let request = UNNotificationRequest(identifier: Self.prefix + id, content: content, trigger: nil)
-        center.add(request)
+        center.add(request) { error in
+            DispatchQueue.main.async {
+                let when = Self.time()
+                if let error {
+                    self.lastSeen = "macOS refused to show \"\(title)\" at \(when): \(error.localizedDescription)"
+                } else {
+                    self.lastSeen = "Showed \"\(title)\" at \(when)\(self.locked ? ", while locked" : "")."
+                }
+            }
+        }
     }
 
     private func askOnce(force: Bool = false, then: (() -> Void)? = nil) {
