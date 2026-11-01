@@ -106,6 +106,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         add(menu, "Toggle Island", #selector(toggleIsland), "")
         add(menu, "Pin Island Open", #selector(togglePin), "")
         add(menu, "Floating Player", #selector(toggleFloatingPlayer), "")
+        add(menu, "Live Activities on Lock Screen", #selector(toggleLockScreen), "")
         menu.addItem(.separator())
         add(menu, "Clear Clipboard History", #selector(clearClipboard), "")
         add(menu, "Clear File Tray", #selector(clearTray), "")
@@ -137,10 +138,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
 
     @objc private func toggleFloatingPlayer() { FloatingPlayer.shared.toggle() }
 
+    @objc private func toggleLockScreen() {
+        let defaults = UserDefaults.standard
+        defaults.set(!defaults.bool(forKey: Prefs.lockScreen), forKey: Prefs.lockScreen)
+    }
+
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
         switch menuItem.action {
         case #selector(togglePin): menuItem.state = AppState.shared.isPinned ? .on : .off
         case #selector(toggleFloatingPlayer): menuItem.state = FloatingPlayer.shared.isShown ? .on : .off
+        case #selector(toggleLockScreen):
+            menuItem.state = UserDefaults.standard.bool(forKey: Prefs.lockScreen) ? .on : .off
         default: break
         }
         return true

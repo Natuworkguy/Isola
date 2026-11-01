@@ -98,6 +98,8 @@ specific to it.
 - **Live Activities from anything:** apps and scripts can start their own activity with a checklist that ticks off
   in place, a progress ring or a countdown, using `isola://activity` links. See
   [Live Activities from anything](#live-activities-from-anything).
+- **Lock screen:** while the Mac is locked, those Live Activities from apps and scripts show as notifications that
+  update in place, and unlocking clears them. One switch, in Settings or the menu bar menu, turns this off.
 - **File Tray:** drop files in, drag them back out, AirDrop or share them, zip them to Downloads, or convert images.
   `open -a Isola report.pdf` adds a file from the command line. Files are never moved or copied.
 - **Basket:** shake a file while you drag it and a drop target appears right at the pointer: Tray, AirDrop, Convert

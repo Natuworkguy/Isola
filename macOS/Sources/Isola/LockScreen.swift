@@ -15,6 +15,9 @@ final class LockScreen: NSObject, ObservableObject {
 
     private var locked = false
     private var watching: AnyCancellable?
+    private var switching: AnyCancellable?
+    /// The switch as last seen, to act only when it flips.
+    private var wasEnabled = false
     private var shown: [String: (body: String, step: String, at: Date, title: String)] = [:]
     private var asked = false
     /// Whether notifications are allowed, as Settings shows it: nil until known.
@@ -41,6 +44,21 @@ final class LockScreen: NSObject, ObservableObject {
         watching = AppState.shared.$activities
             .receive(on: RunLoop.main)
             .sink { [weak self] in self?.changed($0) }
+        // The switch, from Settings or the menu bar: off clears what is showing, on asks for notifications if
+        // never asked, and picks up what is already running if the Mac is locked.
+        wasEnabled = enabled
+        switching = NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                guard let self, self.enabled != self.wasEnabled else { return }
+                self.wasEnabled = self.enabled
+                if self.enabled {
+                    self.askOnce()
+                    self.changed(AppState.shared.activities)
+                } else {
+                    self.clear()
+                }
+            }
         // Asked as Isola starts, with the Mac in use: not when the first activity comes, which may be just before
         // the screen locks, with the question waiting unseen behind it.
         if enabled { askOnce() } else { check() }
@@ -87,6 +105,11 @@ final class LockScreen: NSObject, ObservableObject {
 
     @objc private func didUnlock() {
         locked = false
+        clear()
+    }
+
+    /// Every lock-screen notification of Isola's, gone.
+    private func clear() {
         let ids = shown.keys.map { Self.prefix + $0 }
         center.removeDeliveredNotifications(withIdentifiers: ids)
         center.getDeliveredNotifications { delivered in

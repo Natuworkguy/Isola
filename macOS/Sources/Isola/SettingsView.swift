@@ -194,8 +194,11 @@ struct IslandSettings: View {
                 Text(verbatim: "open -g \"isola://activity?id=build&title=Build&steps=done:Fetch|active:Compile|todo:Test\"\nopen -g \"isola://activity/end?id=build\"")
                     .font(.system(.caption, design: .monospaced))
                     .textSelection(.enabled)
-                Toggle("Show them on the lock screen", isOn: $lockScreen)
-                Text("While the Mac is locked, each one (like Flash at work) is a notification that updates as it goes, and says when it finished. Unlocking clears them.")
+            }
+
+            Section("Lock screen") {
+                Toggle("Show Live Activities on the lock screen", isOn: $lockScreen)
+                Text("While the Mac is locked, each Live Activity from an app or script (like Flash at work) is a notification that updates as it goes, and says when it finished. Unlocking clears them, and so does turning this off. It is in the menu bar menu too.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 if lockScreen {
