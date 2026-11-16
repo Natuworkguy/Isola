@@ -79,6 +79,14 @@ try {
         $src = Get-ChildItem -Path $tmp -Directory -Filter 'Isola-*' | Select-Object -First 1
         if (-not $src) { throw "Could not unpack Isola's source." }
         Write-Host 'Building Isola. The first build takes a few minutes.'
+        # quiet .NET's first-run welcome, and give the build nuget.org to find its packages: a freshly installed SDK
+        # may have no package source on this PC, and then nothing resolves
+        $env:DOTNET_NOLOGO = '1'; $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'; $env:DOTNET_GENERATE_ASPNET_CERTIFICATE = 'false'
+        $config = Join-Path $src.FullName 'Windows\nuget.config'
+        if (-not (Test-Path $config)) {
+            Set-Content -LiteralPath $config -Encoding Ascii -Value ('<?xml version="1.0" encoding="utf-8"?><configuration><packageSources>' +
+                '<add key="nuget.org" value="https://api.nuget.org/v3/index.json" protocolVersion="3" /></packageSources></configuration>')
+        }
         Push-Location (Join-Path $src.FullName 'Windows')
         try { & .\build.ps1 -Runtime "win-$Arch" } finally { Pop-Location }
         $exe = Join-Path $src.FullName "Windows\build\win-$Arch\Isola.exe"
