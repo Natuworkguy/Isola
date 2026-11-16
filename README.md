@@ -13,6 +13,7 @@
 </p>
 
 <p align="center">
+  <a href="https://www.youtube.com/watch?v=arPCowm-AFM"><b>Watch the video</b></a> &nbsp;·&nbsp;
   <a href="#download"><b>Download</b></a> &nbsp;·&nbsp;
   <a href="#features"><b>Features</b></a> &nbsp;·&nbsp;
   <a href="#notifications"><b>For developers</b></a> &nbsp;·&nbsp;
@@ -59,6 +60,19 @@
     <td align="center"><sub>Windows 11</sub></td>
   </tr>
 </table>
+
+Or install it with one line, which picks the right download for your computer, installs it and starts it. Where a
+release has no download for your system yet, it builds Isola from source, installing what that needs first (the Xcode
+Command Line Tools on a Mac, the .NET 8 SDK on Windows). `--dev` (`-Dev`) installs the dev version, built from source,
+and `--uninstall` (`-Uninstall`) takes Isola back out.
+
+Mac:
+
+    curl -fsSL https://raw.githubusercontent.com/Natuworkguy/Isola/main/install.sh | bash
+
+Windows (PowerShell):
+
+    irm https://raw.githubusercontent.com/Natuworkguy/Isola/main/install.ps1 | iex
 
 On the Mac, open the disk image and drag Isola to Applications. The Mac app is Swift, SwiftUI and AppKit. It is not
 notarised, so the first time, right-click it and choose Open. On Windows, the installer needs no administrator rights
