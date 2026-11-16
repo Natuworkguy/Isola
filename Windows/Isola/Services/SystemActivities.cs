@@ -23,6 +23,7 @@ namespace Isola.Services;
 public sealed class SystemActivities
 {
     [DllImport("user32.dll")] static extern short GetKeyState(int key);
+    [DllImport("shlwapi.dll", CharSet = CharSet.Unicode)] static extern int SHLoadIndirectString(string source, System.Text.StringBuilder output, int size, IntPtr reserved);
     [DllImport("user32.dll")] static extern IntPtr GetKeyboardLayout(uint thread);
     [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint process);
     [DllImport("user32.dll")] static extern int GetSystemMetrics(int index);
@@ -372,19 +373,20 @@ public sealed class SystemActivities
             foreach (var toast in toasts)
             {
                 if (!seenToasts.Add(toast.Id) || firstPoll) continue;
-                string app = "", name = "";
+                string app = "", name = "", package = "";
                 try
                 {
                     app = toast.AppInfo.AppUserModelId;
                     name = toast.AppInfo.DisplayInfo.DisplayName;
                 }
                 catch { }
+                try { package = toast.AppInfo.Package?.Id.FullName ?? ""; } catch { }
                 if (!app.Contains("WindowsAlarms", StringComparison.OrdinalIgnoreCase) && name is not ("Clock" or "Alarms & Clock")) continue;
                 var texts = new List<string>();
                 try
                 {
                     var binding = toast.Notification.Visual.GetBinding(KnownNotificationBindings.ToastGeneric);
-                    if (binding is not null) texts.AddRange(binding.GetTextElements().Select(t => t.Text).Where(t => !string.IsNullOrWhiteSpace(t)));
+                    if (binding is not null) texts.AddRange(binding.GetTextElements().Select(t => Readable(t.Text, package)).Where(t => !string.IsNullOrWhiteSpace(t)));
                 }
                 catch { }
                 var id = toast.Id;
@@ -401,6 +403,37 @@ public sealed class SystemActivities
         catch { }
         firstPoll = false;
         polling = false;
+    }
+
+    /// <summary>
+    /// A notification's text as words. Clock (and other packaged apps) can send a pointer into their own strings,
+    /// "ms-resource:TimerDoneText", that Windows looks up for its own banner but leaves as it is for anyone reading
+    /// the notification: looked up here in the app's package, and failing that, made readable from its name.
+    /// </summary>
+    static string Readable(string text, string package)
+    {
+        if (string.IsNullOrEmpty(text) || !text.StartsWith("ms-resource:", StringComparison.OrdinalIgnoreCase)) return text;
+        var key = text.Substring("ms-resource:".Length);
+        if (!string.IsNullOrEmpty(package))
+        {
+            var family = package.Split('_')[0];
+            var tries = key.StartsWith("//") ? new[] { "ms-resource:" + key }
+                : new[] { $"ms-resource://{family}/Resources/{key.TrimStart('/')}", $"ms-resource:///Resources/{key.TrimStart('/')}", "ms-resource:" + key };
+            foreach (var uri in tries)
+            {
+                try
+                {
+                    var buf = new System.Text.StringBuilder(1024);
+                    if (SHLoadIndirectString($"@{{{package}?{uri}}}", buf, buf.Capacity, IntPtr.Zero) == 0 && buf.Length > 0) return buf.ToString();
+                }
+                catch { }
+            }
+        }
+        // "TimerDoneText" -> "Timer done"
+        var last = key.Split('/', '\\').Last();
+        if (last.EndsWith("Text", StringComparison.Ordinal) && last.Length > 4) last = last[..^4];
+        var words = System.Text.RegularExpressions.Regex.Replace(last, "(?<=[a-z0-9])(?=[A-Z])", " ").Replace('_', ' ').Trim().ToLowerInvariant();
+        return words.Length > 0 ? char.ToUpperInvariant(words[0]) + words[1..] : text;
     }
 
     static void Open(string target)
