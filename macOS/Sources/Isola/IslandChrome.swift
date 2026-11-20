@@ -51,6 +51,7 @@ struct ExpandedView: View {
                 case .clipboard: ClipboardView(monitor: state.clipboard)
                 case .calendar: CalendarView(monitor: state.calendar)
                 case .system: SystemView(stats: state.system)
+                case .tools: ToolsView()
                 }
             }
             .id(state.tab)

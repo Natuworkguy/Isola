@@ -114,12 +114,22 @@ specific to it.
   [Live Activities from anything](#live-activities-from-anything).
 - **Lock screen:** while the Mac is locked, those Live Activities from apps and scripts show as notifications that
   update in place, and unlocking clears them. One switch, in Settings or the menu bar menu, turns this off.
-- **File Tray:** drop files in, drag them back out, AirDrop or share them, zip them to Downloads, or convert images.
+- **File Tray:** drop files in, drag them back out, AirDrop or share them, zip them to Downloads, convert images,
+  shrink them to send, combine PDFs and images into one PDF, or copy the text in an image. It takes Mail messages and
+  pictures from web pages too. Watched folders (Downloads, say) put their new files in it by themselves.
   `open -a Isola report.pdf` adds a file from the command line. Files are never moved or copied.
 - **Basket:** shake a file while you drag it and a drop target appears right at the pointer: Tray, AirDrop, Convert
   or Zip, without dragging all the way up to the island.
 - **Clipboard:** text, links, colours and images you copy, as preview cards you can search. Click one to copy it
-  again. Concealed copies from password managers are skipped.
+  again, or copy the text in an image. Concealed copies from password managers are skipped.
+- **Tools,** each on a Control-Option shortcut, in the island's Tools tab and the Ring, and each can be turned off:
+  - **The Ring** (⌃⌥Space): a circle of tools around the pointer.
+  - **Capture** (⌃⌥⇧S): pick an area and mark it up (pen, arrow, box, highlighter, blur, text), then copy, save
+    or drop it in the tray. **Copy text** (⌃⌥⇧T) reads the text in an area and copies it.
+  - **Dictation** (⌃⌥⇧D): what you say shows in the island as you say it, then is typed where you were.
+  - **Window snapping:** ⌃⌥ and an arrow for halves, U I J K for quarters, D F G for thirds, Return to fill.
+  - **Calls** in Zoom, Teams and FaceTime: a call timer, with Mute and Leave; ⌃⌥⇧M mutes the microphone.
+  - **Menu bar tidying:** icons dragged left of Isola's divider hide behind a chevron.
 - **Calendar** and **System** tabs: your next events, and CPU, memory, disk and battery gauges.
 - **Gestures and a shortcut:** swipe down on the island to open it and up on its top edge to close it, swipe sideways
   over the music to skip tracks, or press Control-Option-A from anywhere.
@@ -130,7 +140,8 @@ specific to it.
 - **Notifications from anything:** apps and scripts can show a short banner with an `isola://notify` link. See
   [Notifications](#notifications).
 
-Everything is configurable under the menu bar icon, Settings. Opening Isola again from Applications, Launchpad or
+Everything is configurable under the menu bar icon, Settings, laid out like System Settings. A welcome tour shows
+the way the first time, and Isola says when a newer version is out. Opening Isola again from Applications, Launchpad or
 Spotlight opens Settings too, with a Dock icon while it is open. On a Mac with Screen Time limits, that window is where
 macOS asks for more time, and opening it once puts Isola in Screen Time's list of apps, so it can be Always Allowed.
 

@@ -88,6 +88,7 @@ enum IslandTab: String, CaseIterable, Identifiable {
     case clipboard = "Clipboard"
     case calendar = "Calendar"
     case system = "System"
+    case tools = "Tools"
 
     var id: String { rawValue }
     var prefKey: String { "tab." + rawValue }
@@ -100,6 +101,7 @@ enum IslandTab: String, CaseIterable, Identifiable {
         case .clipboard: return "doc.on.clipboard"
         case .calendar: return "calendar"
         case .system: return "cpu"
+        case .tools: return "wand.and.stars"
         }
     }
 }
