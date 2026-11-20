@@ -24,6 +24,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         MemoryGuard.shared.start()
         LockScreen.shared.start()
         WatchedFolders.shared.start()
+        Shortcuts.shared.start()
+        CallControls.shared.start()
+        MenuBarHider.shared.start()
 
         notch = NotchController(state: state)
         notch?.show()

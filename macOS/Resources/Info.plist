@@ -42,6 +42,12 @@
     <string>Isola shows in the island when a download finishes.</string>
     <key>NSDesktopFolderUsageDescription</key>
     <string>Isola shows in the island when a screenshot is saved.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Isola listens while you dictate, after you press its dictation shortcut.</string>
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>Isola turns what you dictate into text, on this Mac where it can.</string>
+    <key>NSScreenCaptureUsageDescription</key>
+    <string>Isola captures the part of the screen you choose, to mark up or to read its text.</string>
     <key>NSCalendarsFullAccessUsageDescription</key>
     <string>Isola shows your upcoming events in the island.</string>
 </dict>
