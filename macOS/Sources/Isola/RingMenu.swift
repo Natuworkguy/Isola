@@ -121,40 +121,86 @@ struct RingView: View {
 
     var body: some View {
         ZStack {
-            Circle()
-                .fill(.ultraThinMaterial)
-                .overlay(Circle().strokeBorder(.white.opacity(0.18), lineWidth: 1))
-                .frame(width: 270, height: 270)
-                .shadow(color: .black.opacity(0.35), radius: 18, y: 6)
-            VStack(spacing: 2) {
-                Text(hovered.flatMap { id in items.first { $0.id == id }?.title } ?? "Isola")
-                    .font(.system(size: 13, weight: .semibold))
-                Text(hovered == nil ? "Pick a tool" : "Press \(hovered!)")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.secondary)
-            }
-            .frame(width: 92)
+            RingBackdrop()
+            RingCentre(title: centreTitle, hint: centreHint)
             ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                let angle = Double(index) / Double(items.count) * 2 * .pi - .pi / 2
-                Button { choose(item) } label: {
-                    ZStack {
-                        Circle().fill(item.tint.gradient)
-                            .frame(width: hovered == item.id ? 54 : 46, height: hovered == item.id ? 54 : 46)
-                            .shadow(color: item.tint.opacity(0.5), radius: hovered == item.id ? 8 : 3)
-                        Image(systemName: item.symbol)
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundStyle(.white)
+                RingButton(item: item, index: index, count: items.count, shown: shown,
+                           hovered: hovered == item.id, choose: choose) { inside in
+                    if inside {
+                        hovered = item.id
+                    } else if hovered == item.id {
+                        hovered = nil
                     }
                 }
-                .buttonStyle(.plain)
-                .onHover { hovered = $0 ? item.id : (hovered == item.id ? nil : hovered) }
-                .offset(x: cos(angle) * (shown ? 98 : 30), y: sin(angle) * (shown ? 98 : 30))
-                .opacity(shown ? 1 : 0)
-                .animation(.spring(response: 0.32, dampingFraction: 0.72).delay(Double(index) * 0.015), value: shown)
-                .animation(.spring(response: 0.25, dampingFraction: 0.7), value: hovered)
             }
         }
         .frame(width: 300, height: 300)
         .onAppear { shown = true }
+    }
+
+    private var centreTitle: String {
+        guard let hovered, let item = items.first(where: { $0.id == hovered }) else { return "Isola" }
+        return item.title
+    }
+
+    private var centreHint: String {
+        guard let hovered else { return "Pick a tool" }
+        return "Press \(hovered)"
+    }
+}
+
+private struct RingBackdrop: View {
+    var body: some View {
+        Circle()
+            .fill(.ultraThinMaterial)
+            .overlay(Circle().strokeBorder(Color.white.opacity(0.18), lineWidth: 1))
+            .frame(width: 270, height: 270)
+            .shadow(color: Color.black.opacity(0.35), radius: 18, y: 6)
+    }
+}
+
+private struct RingCentre: View {
+    let title: String
+    let hint: String
+
+    var body: some View {
+        VStack(spacing: 2) {
+            Text(title).font(.system(size: 13, weight: .semibold))
+            Text(hint).font(.system(size: 10)).foregroundStyle(.secondary)
+        }
+        .frame(width: 92)
+    }
+}
+
+private struct RingButton: View {
+    let item: RingMenu.Item
+    let index: Int
+    let count: Int
+    let shown: Bool
+    let hovered: Bool
+    let choose: (RingMenu.Item) -> Void
+    let hover: (Bool) -> Void
+
+    var body: some View {
+        let angle: Double = Double(index) / Double(count) * 2 * Double.pi - Double.pi / 2
+        let radius: CGFloat = shown ? 98 : 30
+        let size: CGFloat = hovered ? 54 : 46
+        Button { choose(item) } label: {
+            ZStack {
+                Circle()
+                    .fill(item.tint.gradient)
+                    .frame(width: size, height: size)
+                    .shadow(color: item.tint.opacity(0.5), radius: hovered ? 8 : 3)
+                Image(systemName: item.symbol)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(Color.white)
+            }
+        }
+        .buttonStyle(.plain)
+        .onHover(perform: hover)
+        .offset(x: CGFloat(cos(angle)) * radius, y: CGFloat(sin(angle)) * radius)
+        .opacity(shown ? 1 : 0)
+        .animation(.spring(response: 0.32, dampingFraction: 0.72).delay(Double(index) * 0.015), value: shown)
+        .animation(.spring(response: 0.25, dampingFraction: 0.7), value: hovered)
     }
 }

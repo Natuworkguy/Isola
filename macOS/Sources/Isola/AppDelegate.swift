@@ -27,6 +27,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         Shortcuts.shared.start()
         CallControls.shared.start()
         MenuBarHider.shared.start()
+        Updater.shared.start()
+        if !UserDefaults.standard.bool(forKey: Prefs.onboarded) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { Onboarding.show() }
+        }
 
         notch = NotchController(state: state)
         notch?.show()
@@ -172,12 +176,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     @objc private func openSettings() {
         if settingsWindow == nil {
             let window = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 520, height: 620),
-                styleMask: [.titled, .closable],
+                contentRect: NSRect(x: 0, y: 0, width: 780, height: 640),
+                styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
                 backing: .buffered,
                 defer: false
             )
             window.title = "Isola Settings"
+            window.titlebarAppearsTransparent = true
+            window.toolbarStyle = .unified
             window.isReleasedWhenClosed = false
             window.contentView = NSHostingView(rootView: SettingsView())
             window.center()
