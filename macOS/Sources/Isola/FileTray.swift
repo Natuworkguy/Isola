@@ -45,6 +45,42 @@ final class FileTray: ObservableObject {
         }
     }
 
+    /// The images in the tray (or just ITEM), made smaller to send.
+    func compress(_ item: TrayItem? = nil) {
+        let urls = item.map { [$0.url] } ?? items.map(\.url)
+        FileActions.compressImages(urls) { [weak self] made in
+            guard let self else { return }
+            if made.isEmpty {
+                self.flash("There are no images to shrink")
+            } else {
+                self.add(made)
+                self.flash(made.count == 1 ? "Saved \(made[0].lastPathComponent) to Downloads"
+                                           : "Saved \(made.count) smaller images to Downloads")
+            }
+        }
+    }
+
+    /// The PDFs and images in the tray, as one PDF.
+    func combinePDF() {
+        let urls = items.map(\.url).filter(FileActions.isPDFable)
+        guard !urls.isEmpty else {
+            flash("Add PDFs or images to combine")
+            return
+        }
+        FileActions.combinePDF(urls) { [weak self] made in
+            guard let self else { return }
+            if let made {
+                self.add([made])
+                self.flash("Saved \(made.lastPathComponent) to Downloads")
+            } else {
+                self.flash("Could not combine them")
+            }
+        }
+    }
+
+    var hasImages: Bool { items.contains { FileActions.isImage($0.url) } }
+    var canCombine: Bool { items.filter { FileActions.isPDFable($0.url) }.count >= 1 }
+
     func convert(_ item: TrayItem) {
         FileActions.convertImages([item.url]) { [weak self] made in
             guard let self else { return }

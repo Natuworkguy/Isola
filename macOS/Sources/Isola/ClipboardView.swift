@@ -206,6 +206,11 @@ struct ClipCard: View {
         .animation(.easeOut(duration: 0.15), value: copied)
         .contextMenu {
             Button("Copy", action: copy)
+            if entry.kind == .image {
+                Button("Copy Text in Image") {
+                    OCR.copyText(at: ClipboardMonitor.imageFolder.appendingPathComponent(entry.text))
+                }
+            }
             if entry.kind == .link, let url = URL(string: entry.text.trimmingCharacters(in: .whitespacesAndNewlines)) {
                 Button("Open Link") { NSWorkspace.shared.open(url) }
             }

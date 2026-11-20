@@ -48,6 +48,19 @@ enum Prefs {
     static let floatingPlayer = "floatingPlayer"
     static let homeWidgets = "home.widgets"
     static let homeCounter = "home.counter"
+    /// Folders whose new files go into the File Tray, one path a line.
+    static let watchedFolders = "watchedFolders"
+    // Tools, each with its own keyboard shortcut (Shortcuts.swift), and each can be turned off.
+    static let toolRing = "tool.ring"
+    static let toolCapture = "tool.capture"
+    static let toolCaptureText = "tool.captureText"
+    static let toolDictate = "tool.dictate"
+    static let dictatePastes = "tool.dictate.pastes"
+    static let toolSnap = "tool.snap"
+    static let toolMenuBar = "tool.menuBar"
+    static let liveCalls = "live.calls"
+    static let checkUpdates = "checkUpdates"
+    static let onboarded = "onboarded"
 
     static func registerDefaults() {
         var defaults: [String: Any] = [
@@ -99,6 +112,17 @@ enum Prefs {
             hotKey: true,
             floatingPlayer: false,
             homeWidgets: HomeWidget.save(HomeWidget.defaults),
+            watchedFolders: "",
+            toolRing: true,
+            toolCapture: true,
+            toolCaptureText: true,
+            toolDictate: true,
+            dictatePastes: true,
+            toolSnap: true,
+            toolMenuBar: false,
+            liveCalls: true,
+            checkUpdates: true,
+            onboarded: false,
         ]
         for tab in IslandTab.allCases { defaults[tab.prefKey] = true }
         UserDefaults.standard.register(defaults: defaults)

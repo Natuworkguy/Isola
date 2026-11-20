@@ -1,3 +1,4 @@
+import QuickLookThumbnailing
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -33,7 +34,7 @@ struct TrayView: View {
                 }
             }
             .frame(maxHeight: .infinity)
-            .onDrop(of: [.fileURL], isTargeted: $state.isDropTargeted) { providers in
+            .onDrop(of: FileActions.droppable, isTargeted: $state.isDropTargeted) { providers in
                 tray.handleDrop(providers)
             }
 
@@ -48,7 +49,20 @@ struct TrayView: View {
                         pillLabel("Share", "square.and.arrow.up")
                     }
                     .buttonStyle(.plain)
-                    pill("Zip all", "archivebox") { tray.zipAll() }
+                    Menu {
+                        if tray.hasImages {
+                            Button("Shrink Images to Send") { tray.compress() }
+                        }
+                        if tray.canCombine {
+                            Button("Combine into One PDF") { tray.combinePDF() }
+                        }
+                        Button("Zip All") { tray.zipAll() }
+                    } label: {
+                        pillLabel("Actions", "wand.and.stars")
+                    }
+                    .menuStyle(.borderlessButton)
+                    .menuIndicator(.hidden)
+                    .fixedSize()
                     pill("Clear", "xmark") { tray.clear() }
                 }
             }
@@ -76,13 +90,15 @@ struct TrayTile: View {
     @State private var hovering = false
 
     var body: some View {
-        VStack(spacing: 4) {
-            Image(nsImage: item.icon).resizable().frame(width: 52, height: 52)
+        VStack(spacing: 5) {
+            TrayThumbnail(url: item.url, fallback: item.icon)
+                .frame(width: 60, height: 52)
             Text(item.name)
-                .font(.system(size: 10))
+                .font(.system(size: 10, weight: .medium))
                 .lineLimit(2)
+                .truncationMode(.middle)
                 .multilineTextAlignment(.center)
-                .frame(width: 70)
+                .frame(width: 72)
         }
         .padding(8)
         .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.white.opacity(hovering ? 0.14 : 0.07)))
@@ -104,10 +120,41 @@ struct TrayTile: View {
             if FileActions.isImage(item.url) {
                 let format = FileActions.conversionTarget(for: item.url) == .png ? "PNG" : "JPEG"
                 Button("Convert to \(format)") { tray.convert(item) }
+                Button("Shrink to Send") { tray.compress(item) }
+                Button("Copy Text in Image") { OCR.copyText(at: item.url) }
             }
             Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([item.url]) }
             Divider()
             Button("Remove from Tray") { tray.remove(item) }
+        }
+    }
+}
+
+/// A file's picture as Finder shows it: a photo's own picture, a PDF's first page, else its icon.
+struct TrayThumbnail: View {
+    let url: URL
+    let fallback: NSImage
+    @State private var picture: NSImage?
+
+    var body: some View {
+        Group {
+            if let picture {
+                Image(nsImage: picture)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    .shadow(color: .black.opacity(0.35), radius: 3, y: 1)
+            } else {
+                Image(nsImage: fallback).resizable().aspectRatio(contentMode: .fit)
+            }
+        }
+        .task(id: url) {
+            let scale = NSScreen.main?.backingScaleFactor ?? 2
+            let request = QLThumbnailGenerator.Request(
+                fileAt: url, size: CGSize(width: 60, height: 52), scale: scale, representationTypes: .thumbnail)
+            if let made = try? await QLThumbnailGenerator.shared.generateBestRepresentation(for: request) {
+                picture = made.nsImage
+            }
         }
     }
 }
