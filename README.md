@@ -97,7 +97,9 @@ specific to it.
   dice, counter and a colour picker. Separators, as many as you like, split them into groups.
 - **Media:** whatever macOS reports as now playing: Music, Spotify, podcasts, VLC, and videos in Safari, Chrome and
   other browsers. Artwork, the source app, a draggable seek bar and transport controls, and a card for each app when
-  several play. Pop it out into a floating player that stays on the desktop, on every Space.
+  several play: every app making sound gets one, Music and Spotify with their track and their own controls, others by
+  name with a click that brings them forward. Pop it out into a floating player that stays on the desktop, on every
+  Space; it grows a row for each other app playing.
 - **Live Activities:** the island answers what is happening on your Mac.
   - Volume and brightness as a bar beside the notch.
   - Timers and alarms ring in the island with Stop and Repeat or Snooze: Isola's own Timer and Focus sessions, and
@@ -140,9 +142,11 @@ specific to it.
 - **Notifications from anything:** apps and scripts can show a short banner with an `isola://notify` link. See
   [Notifications](#notifications).
 
-Everything is configurable under the menu bar icon, Settings, laid out like System Settings. A welcome tour shows
+Everything is configurable under the menu bar icon, Settings: a sidebar you can search, and a live preview of the
+island that follows the size, style and material as you change them. A welcome tour shows
 the way the first time, and Isola says when a newer version is out. Opening Isola again from Applications, Launchpad or
-Spotlight opens Settings too, with a Dock icon while it is open. On a Mac with Screen Time limits, that window is where
+Spotlight opens Settings too. While Settings or the welcome tour is open, Isola is in the Dock, Command-Tab and
+Mission Control like any app, with its own menu bar. On a Mac with Screen Time limits, that window is where
 macOS asks for more time, and opening it once puts Isola in Screen Time's list of apps, so it can be Always Allowed.
 
 ### What it won't do
