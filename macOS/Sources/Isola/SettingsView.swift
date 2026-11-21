@@ -354,7 +354,7 @@ struct VisualEffect: NSViewRepresentable {
         let view = NSVisualEffectView()
         view.material = material
         view.blendingMode = .behindWindow
-        view.state = .followsWindowActive
+        view.state = .followsWindowActiveState
         return view
     }
     func updateNSView(_ view: NSVisualEffectView, context: Context) { view.material = material }
