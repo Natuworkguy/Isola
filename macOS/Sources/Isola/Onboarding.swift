@@ -52,7 +52,8 @@ struct OnboardingView: View {
         ZStack {
             // The film, made in Riptide: the island opening into a music card and a charging pill, over a drifting
             // wallpaper. Full bright on the first page, frosted behind the others.
-            LoopingVideo(name: "Welcome").ignoresSafeArea()
+            // It only plays on the first page; behind the others it holds still, frosted.
+            LoopingVideo(name: "Welcome", playing: step == 0).ignoresSafeArea()
             Rectangle().fill(.ultraThinMaterial).opacity(step == 0 ? 0 : 1).ignoresSafeArea()
             LinearGradient(colors: [.clear, .black.opacity(step == 0 ? 0.75 : 0.45)], startPoint: .center, endPoint: .bottom)
                 .ignoresSafeArea()
@@ -367,6 +368,7 @@ extension AnyTransition {
 /// A film from the app's resources, playing on a loop with no sound, filling its frame.
 struct LoopingVideo: NSViewRepresentable {
     let name: String
+    var playing = true
 
     final class PlayerView: NSView {
         private let player = AVQueuePlayer()
@@ -385,7 +387,6 @@ struct LoopingVideo: NSViewRepresentable {
             player.preventsDisplaySleepDuringVideoPlayback = false
             if let url {
                 looper = AVPlayerLooper(player: player, templateItem: AVPlayerItem(url: url))
-                player.play()
             }
         }
 
@@ -399,9 +400,18 @@ struct LoopingVideo: NSViewRepresentable {
             CATransaction.commit()
         }
 
+        var playing = true {
+            didSet { if playing != oldValue { apply() } }
+        }
+
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
-            window == nil ? player.pause() : player.play()
+            apply()
+        }
+
+        /// Plays while it is wanted and on screen; otherwise holds the frame it is on.
+        private func apply() {
+            playing && window != nil ? player.play() : player.pause()
         }
     }
 
@@ -409,5 +419,5 @@ struct LoopingVideo: NSViewRepresentable {
         PlayerView(url: Bundle.main.url(forResource: name, withExtension: "mp4"))
     }
 
-    func updateNSView(_ view: PlayerView, context: Context) {}
+    func updateNSView(_ view: PlayerView, context: Context) { view.playing = playing }
 }
