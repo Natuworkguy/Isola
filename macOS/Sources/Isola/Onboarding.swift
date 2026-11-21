@@ -44,7 +44,9 @@ struct OnboardingView: View {
     @State private var trusted = AXIsProcessTrusted()
     @State private var screen = CGPreflightScreenCaptureAccess()
     @State private var atLogin = SMAppService.mainApp.status == .enabled
-    private let steps = 4
+    @State private var triedShortcut = false
+    @AppStorage(Prefs.openWith) private var openWith: OpenWith = .hover
+    private let steps = 6
     private let tick = Timer.publish(every: 1.5, on: .main, in: .common).autoconnect()
     static let ease = Animation.timingCurve(0.32, 0.72, 0, 1, duration: 0.7)
 
@@ -62,8 +64,10 @@ struct OnboardingView: View {
                 ZStack {
                     switch step {
                     case 0: welcome
-                    case 1: tryThese
-                    case 2: permissions
+                    case 1: shortcut
+                    case 2: opening
+                    case 3: tryThese
+                    case 4: permissions
                     default: finish
                     }
                 }
@@ -81,6 +85,10 @@ struct OnboardingView: View {
         .foregroundStyle(.white)
         .frame(width: 860, height: 580)
         .animation(Self.ease, value: step)
+        .onReceive(NotificationCenter.default.publisher(for: .isolaHotKeyPressed)) { _ in
+            guard step == 1, !triedShortcut else { return }
+            withAnimation(.spring(response: 0.45, dampingFraction: 0.7)) { triedShortcut = true }
+        }
         .onReceive(tick) { _ in
             trusted = AXIsProcessTrusted()
             screen = CGPreflightScreenCaptureAccess()
@@ -140,6 +148,61 @@ struct OnboardingView: View {
                     .lineSpacing(3)
                     .frame(maxWidth: 440, alignment: .leading)
                     .padding(.top, 18)
+            }
+        }
+    }
+
+    /// As the best Mac apps do on their first run: the one shortcut worth learning, on big keys, and a moment to
+    /// try it. The keys go down when it's pressed, and the island opens.
+    private var shortcut: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Eyebrow("From anywhere", delay: 0.05)
+            Reveal(delay: 0.1) { Headline(triedShortcut ? "That's it." : "Press it once.", size: 58) }
+            Reveal(delay: 0.16) {
+                Text(triedShortcut
+                     ? "The island opened. Press the same keys to put it away, from any app."
+                     : "Control, Option and A open the island from any app, without reaching for the mouse. Try it now.")
+                    .font(.system(size: 14, weight: .medium)).foregroundStyle(.white.opacity(0.7))
+                    .frame(maxWidth: 480, alignment: .leading)
+                    .padding(.top, 8)
+            }
+            Reveal(delay: 0.24) {
+                HStack(spacing: 14) {
+                    BigKey(symbol: "⌃", label: "control", down: triedShortcut, delay: 0)
+                    BigKey(symbol: "⌥", label: "option", down: triedShortcut, delay: 0.06)
+                    BigKey(symbol: "A", label: "", down: triedShortcut, delay: 0.12)
+                    if triedShortcut {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 34, weight: .semibold))
+                            .foregroundStyle(.green)
+                            .padding(.leading, 8)
+                            .transition(.scale(scale: 0.4).combined(with: .opacity))
+                    }
+                }
+                .padding(.top, 30)
+            }
+        }
+    }
+
+    /// How the island opens, chosen with a picture of each.
+    private var opening: some View {
+        VStack(alignment: .leading, spacing: 22) {
+            VStack(alignment: .leading, spacing: 0) {
+                Eyebrow("Your way", delay: 0.05)
+                Reveal(delay: 0.1) { Headline("How should it open?", size: 52) }
+            }
+            HStack(spacing: 12) {
+                ForEach(Array(OpenWith.allCases.enumerated()), id: \.element) { index, way in
+                    Reveal(delay: 0.18 + Double(index) * 0.07) {
+                        OpenWayCard(way: way, chosen: openWith == way) {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { openWith = way }
+                        }
+                    }
+                }
+            }
+            Reveal(delay: 0.4) {
+                Text("Change it whenever you like, in Settings, Island.")
+                    .font(.system(size: 11.5)).foregroundStyle(.white.opacity(0.45))
             }
         }
     }
@@ -264,6 +327,106 @@ struct OnboardingView: View {
             .padding(14)
             .background(Glass(radius: 16))
             .animation(.spring(response: 0.4, dampingFraction: 0.8), value: granted)
+        }
+    }
+}
+
+/// A big keyboard key, lit from above, that sinks when pressed.
+private struct BigKey: View {
+    let symbol: String
+    let label: String
+    let down: Bool
+    let delay: Double
+    @State private var pressed = false
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: 18, style: .continuous)
+        ZStack(alignment: .bottomLeading) {
+            shape.fill(Color(white: 0.06)).offset(y: 6)
+            shape.fill(LinearGradient(colors: [Color(white: 0.28), Color(white: 0.17)], startPoint: .top, endPoint: .bottom))
+                .overlay(shape.stroke(.white.opacity(0.22), lineWidth: 1))
+                .overlay(alignment: .topTrailing) {
+                    Text(symbol).font(.system(size: 30, weight: .semibold, design: .rounded)).padding(14)
+                }
+                .overlay(alignment: .bottomLeading) {
+                    Text(label).font(.system(size: 12, weight: .medium)).foregroundStyle(.white.opacity(0.7)).padding(12)
+                }
+                .offset(y: pressed ? 5 : 0)
+                .shadow(color: down ? .green.opacity(0.35) : .clear, radius: 18)
+        }
+        .frame(width: label.isEmpty ? 92 : 118, height: 92)
+        .onChange(of: down) { _, now in
+            guard now else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                withAnimation(.spring(response: 0.18, dampingFraction: 0.6)) { pressed = true }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) { pressed = false }
+                }
+            }
+        }
+    }
+}
+
+/// One way to open the island, as a card with a small moving picture of it.
+private struct OpenWayCard: View {
+    let way: OpenWith
+    let chosen: Bool
+    let choose: () -> Void
+    @State private var phase = false
+
+    var body: some View {
+        Button(action: choose) {
+            VStack(alignment: .leading, spacing: 12) {
+                ZStack(alignment: .top) {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous).fill(.white.opacity(0.06))
+                    Capsule().fill(.black)
+                        .frame(width: phase ? 120 : 64, height: phase ? 40 : 16)
+                        .overlay(Capsule().stroke(.white.opacity(0.18), lineWidth: 0.5))
+                        .padding(.top, 8)
+                    Image(systemName: pointer)
+                        .font(.system(size: 18, weight: .semibold))
+                        .offset(x: phase ? 6 : 34, y: phase ? 26 : 62)
+                }
+                .frame(height: 96)
+                .clipped()
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title).font(.system(size: 15, weight: .bold))
+                    Text(detail).font(.system(size: 11.5)).foregroundStyle(.white.opacity(0.6))
+                }
+            }
+            .padding(12)
+            .background(Glass(radius: 18))
+            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(chosen ? Color.white : .clear, lineWidth: 2))
+            .scaleEffect(chosen ? 1.02 : 1)
+        }
+        .buttonStyle(.plain)
+        .onAppear {
+            withAnimation(.easeInOut(duration: 1.4).repeatForever(autoreverses: true).delay(0.4)) { phase = true }
+        }
+    }
+
+    private var title: String {
+        switch way {
+        case .hover: return "Point at it"
+        case .click: return "Click it"
+        case .scroll: return "Scroll on it"
+        }
+    }
+
+    private var detail: String {
+        switch way {
+        case .hover: return "Opens as the pointer arrives."
+        case .click: return "Opens only when you click."
+        case .scroll: return "Two fingers down to open."
+        }
+    }
+
+    private var pointer: String {
+        switch way {
+        case .hover: return "cursorarrow"
+        case .click: return "cursorarrow.click"
+        case .scroll: return "hand.draw"
         }
     }
 }

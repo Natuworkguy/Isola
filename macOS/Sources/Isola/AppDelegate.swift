@@ -3,6 +3,8 @@ import SwiftUI
 
 extension Notification.Name {
     static let isolaOpenSettings = Notification.Name("IsolaOpenSettings")
+    /// The open-the-island shortcut was pressed (the welcome tour waits for it).
+    static let isolaHotKeyPressed = Notification.Name("IsolaHotKeyPressed")
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
@@ -44,7 +46,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             forName: .isolaOpenSettings, object: nil, queue: .main
         ) { [weak self] _ in self?.openSettings() }
 
-        hotKey.pressed = { [weak self] in self?.notch?.toggleFromKeyboard() }
+        hotKey.pressed = { [weak self] in
+            self?.notch?.toggleFromKeyboard()
+            NotificationCenter.default.post(name: .isolaHotKeyPressed, object: nil)
+        }
         hotKey.setEnabled(UserDefaults.standard.bool(forKey: Prefs.hotKey))
         NotificationCenter.default.addObserver(
             forName: UserDefaults.didChangeNotification, object: nil, queue: .main
