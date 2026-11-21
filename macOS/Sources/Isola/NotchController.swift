@@ -23,6 +23,9 @@ final class NotchController {
     private var swipe = CGPoint.zero
     private var swipeFired = false
     private var lastScroll = Date.distantPast
+    /// Whether a full-screen app or video is in front on the island's display, looked at once a second.
+    private var fullScreenHidden = false
+    private var lastFullScreenCheck = Date.distantPast
     /// After a swipe closes the island, hovering waits for the pointer to leave before it can open it again.
     private var hoverBlocked = false
 
@@ -303,6 +306,14 @@ extension NotchController {
     fileprivate func tick() {
         let point = NSEvent.mouseLocation
         trackDrag(point)
+        if Date().timeIntervalSince(lastFullScreenCheck) > 1 {
+            lastFullScreenCheck = Date()
+            updateFullScreen()
+        }
+        if fullScreenHidden && state.banner == nil {
+            if !panel.ignoresMouseEvents { panel.ignoresMouseEvents = true }
+            return
+        }
 
         // Clicks, hovers and drops only belong to the island; everywhere else in the panel they pass through. So do
         // clicks on the closed island when they don't open it (see clicksThrough).
@@ -368,6 +379,39 @@ extension NotchController {
             let since = hoverSince ?? Date()
             hoverSince = since
             if Date().timeIntervalSince(since) >= defaults.double(forKey: Prefs.hoverDelay) { open(tab: nil) }
+        }
+    }
+
+    /// In a full-screen app, a game or a video played full screen, the island steps aside: it fades out and lets
+    /// everything through, and comes back when the app leaves full screen. A banner (a timer ringing, a call) still
+    /// shows over it. Set in Settings, Look.
+    private func updateFullScreen() {
+        let wanted = defaults.bool(forKey: Prefs.hideInFullScreen) && Self.fullScreenApp(on: currentScreen)
+        let hide = wanted && state.banner == nil
+        guard hide != (panel.alphaValue < 0.5) || wanted != fullScreenHidden else { return }
+        fullScreenHidden = wanted
+        if wanted && state.isExpanded && !state.isPinned { withAnimation { state.isExpanded = false } }
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.35
+            panel.animator().alphaValue = hide ? 0 : 1
+        }
+    }
+
+    /// The front app has a window covering the whole of SCREEN at the normal window level: it is full screen.
+    static func fullScreenApp(on screen: NSScreen?) -> Bool {
+        guard let screen, let front = NSWorkspace.shared.frontmostApplication,
+              front.processIdentifier != NSRunningApplication.current.processIdentifier,
+              let number = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber else { return false }
+        let display = CGDisplayBounds(CGDirectDisplayID(number.uint32Value))
+        guard let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID)
+                as? [[String: Any]] else { return false }
+        return windows.contains { info in
+            guard (info[kCGWindowOwnerPID as String] as? pid_t) == front.processIdentifier,
+                  (info[kCGWindowLayer as String] as? Int) == 0,
+                  let bounds = info[kCGWindowBounds as String] as? [String: CGFloat],
+                  let rect = CGRect(dictionaryRepresentation: bounds as CFDictionary) else { return false }
+            return abs(rect.minX - display.minX) < 1 && abs(rect.minY - display.minY) < 1
+                && rect.width >= display.width - 1 && rect.height >= display.height - 1
         }
     }
 

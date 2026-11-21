@@ -94,19 +94,20 @@ specific to it.
   outlines; drag them into a new order, or drag new ones up from the gallery. 25 widgets: clock, analog clock, world
   clock, now playing, weather, battery, system graphs, network speed, storage, uptime, next event, today, month,
   day and year progress, timer, Focus sessions, stopwatch, clipboard, File Tray, shortcuts, Keep Awake, moon phase,
-  dice, counter and a colour picker. Separators, as many as you like, split them into groups.
+  dice, counter, a colour picker, and the batteries of your Bluetooth devices. Separators, as many as you like, split them into groups.
 - **Media:** whatever macOS reports as now playing: Music, Spotify, podcasts, VLC, and videos in Safari, Chrome and
   other browsers. Artwork, the source app, a draggable seek bar and transport controls, and a card for each app when
   several play: every app making sound gets one, Music and Spotify with their track and their own controls, others by
   name with a click that brings them forward. Pop it out into a floating player that stays on the desktop, on every
-  Space; it grows a row for each other app playing.
+  Space; it grows a row for each other app playing. Turn on lyrics and the line being sung shows under the artist.
 - **Live Activities:** the island answers what is happening on your Mac.
   - Volume and brightness as a bar beside the notch.
   - Timers and alarms ring in the island with Stop and Repeat or Snooze: Isola's own Timer and Focus sessions, and
     the Clock app's alarms and timers, whose banner Isola moves out of sight.
   - A running timer, Focus session or stopwatch counts in the ears.
   - Green and orange privacy dots while the camera or microphone is in use.
-  - Banners for charging and battery, headphones and AirPods (with battery), drives (with Eject), VPNs, downloads
+  - Banners for charging and battery, any Bluetooth device connecting (keyboards, mice, trackpads, headphones,
+    controllers, with their battery) and running low, drives (with Eject), VPNs, downloads
     finishing, screenshots and screen recordings, going offline and coming back, displays, Caps Lock, the keyboard
     layout, meetings about to start, low storage and Focus.
   - Each has its own switch. Optionally Isola takes over the volume, mute and brightness keys so the macOS overlay
@@ -135,6 +136,8 @@ specific to it.
 - **Calendar** and **System** tabs: your next events, and CPU, memory, disk and battery gauges.
 - **Gestures and a shortcut:** swipe down on the island to open it and up on its top edge to close it, swipe sideways
   over the music to skip tracks, or press Control-Option-A from anywhere.
+- **Full screen:** in a full-screen app, game or video the island fades away, and comes back after. Banners still
+  show. One switch in Settings, Look.
 - **Look:** Dynamic Glass or solid black, in every style: floating in the menu bar or attached to the top edge.
   Dynamic Glass blurs and takes on the colour of whatever is behind the island; on macOS 26 it is the system's own
   `glassEffect`. A tab highlight that glides between tabs, and an ambient glow taken
@@ -151,9 +154,10 @@ macOS asks for more time, and opening it once puts Isola in Screen Time's list o
 
 ### What it won't do
 
-Isola never sends your clipboard, files or music anywhere. The Weather widget is the one thing that goes online: it
-asks a public service for a rough location from your network address, then Open-Meteo for the forecast, and only when
-it is on your Home tab. macOS gives apps no way to read other apps' notifications or the current Focus, so Clock
+Isola never sends your clipboard, files or music anywhere. Two things go online, and only when you use them: the
+Weather widget asks a public service for a rough location from your network address, then Open-Meteo for the
+forecast, while it is on your Home tab; and lyrics, off until you turn them on, ask LRCLIB for the words of the song
+playing, sending its title, artist and length. macOS gives apps no way to read other apps' notifications or the current Focus, so Clock
 alerts use Accessibility and Focus needs Full Disk Access; Settings says so beside each, and both are optional.
 
 ## Build and run

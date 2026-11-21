@@ -18,6 +18,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         let state = AppState.shared
         state.clipboard.start()
         state.nowPlaying.start()
+        Lyrics.shared.follow(state.nowPlaying)
         state.live.start()
         state.systemActivities.start()
         state.mediaKeys.start()

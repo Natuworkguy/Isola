@@ -5,7 +5,7 @@ import SwiftUI
 enum HomeWidget: String, CaseIterable, Identifiable {
     case clock, analog, world, media, weather, battery, system, network, disk, uptime
     case calendar, date, month, progress, timer, focus, stopwatch, clipboard, tray, shortcuts
-    case awake, moon, dice, counter, colors
+    case awake, moon, dice, counter, colors, devices
 
     var id: String { rawValue }
 
@@ -36,6 +36,7 @@ enum HomeWidget: String, CaseIterable, Identifiable {
         case .dice: return "Dice"
         case .counter: return "Counter"
         case .colors: return "Color Picker"
+        case .devices: return "Devices"
         }
     }
 
@@ -66,6 +67,7 @@ enum HomeWidget: String, CaseIterable, Identifiable {
         case .dice: return "die.face.5.fill"
         case .counter: return "plus.forwardslash.minus"
         case .colors: return "eyedropper"
+        case .devices: return "headphones"
         }
     }
 
@@ -97,6 +99,7 @@ enum HomeWidget: String, CaseIterable, Identifiable {
         case .dice: return [Color(red: 0.35, green: 0.85, blue: 0.55), Color(red: 0.1, green: 0.55, blue: 0.4)]
         case .counter: return [Color(red: 1, green: 0.45, blue: 0.7), Color(red: 0.85, green: 0.2, blue: 0.5)]
         case .colors: return [Color(red: 1, green: 0.6, blue: 0.2), Color(red: 0.55, green: 0.3, blue: 0.95)]
+        case .devices: return [Color(red: 0.4, green: 0.75, blue: 1), Color(red: 0.2, green: 0.45, blue: 0.95)]
         }
     }
 

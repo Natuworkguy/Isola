@@ -24,6 +24,8 @@ struct NowPlayingView: View {
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(.white.opacity(0.62))
                         .lineLimit(1)
+                    LyricLine(size: 12.5)
+                        .padding(.top, 2)
 
                     Spacer(minLength: 6)
 

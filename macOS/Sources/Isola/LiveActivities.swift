@@ -259,6 +259,8 @@ final class LiveActivities: NSObject {
 
     private func startHeadphones() {
         guard connectNotification == nil else { return }
+        BluetoothBatteries.shared.onLow = { [weak self] device in self?.lowBattery(device) }
+        BluetoothBatteries.shared.start()
         headphonesSince = Date()
         connectNotification = IOBluetoothDevice.register(
             forConnectNotifications: self, selector: #selector(deviceConnected(_:device:)))
@@ -271,13 +273,25 @@ final class LiveActivities: NSObject {
 
     @objc private func deviceConnected(_ notification: IOBluetoothUserNotification, device: IOBluetoothDevice) {
         // Already connected devices are reported straight after registering; those are not news.
-        guard Date().timeIntervalSince(headphonesSince) > 3, device.deviceClassMajor == 0x04 else { return }
-        let name = device.name ?? "Headphones"
-        // The battery levels arrive a moment after the connection.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
-            guard let self, self.enabled(Prefs.liveHeadphones) else { return }
-            self.banner(Self.headphoneSymbol(name), .blue, name, Self.batteryText(device) ?? "Connected", seconds: 5)
+        guard Date().timeIntervalSince(headphonesSince) > 3 else { return }
+        let name = device.name ?? "Bluetooth device"
+        let audio = device.deviceClassMajor == 0x04
+        // The battery levels arrive a moment after the connection: look them up then, for any kind of device.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
+            BluetoothBatteries.shared.refresh { _ in
+                guard let self, self.enabled(Prefs.liveHeadphones) else { return }
+                let known = BluetoothBatteries.shared.device(named: name)
+                let symbol = audio ? Self.headphoneSymbol(name) : (known?.symbol ?? BluetoothBatteries.symbol(for: name, kind: ""))
+                let battery = Self.batteryText(device) ?? known?.summary
+                self.banner(symbol, .blue, name, battery.map { "Connected · \($0)" } ?? "Connected", seconds: 5)
+            }
         }
+    }
+
+    /// A device running low, once each time it does.
+    private func lowBattery(_ device: BluetoothDevice) {
+        guard enabled(Prefs.liveHeadphones) else { return }
+        banner(device.symbol, .red, device.name, "Battery low · \(device.summary)", seconds: 6)
     }
 
     private static func headphoneSymbol(_ name: String) -> String {

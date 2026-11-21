@@ -46,6 +46,7 @@ struct WidgetCard: View {
         case .dice: DiceWidget()
         case .counter: CounterWidget()
         case .colors: ColorPickerWidget(picks: ColorPicks.shared)
+        case .devices: DevicesWidget(batteries: BluetoothBatteries.shared)
         }
     }
 }
@@ -1600,5 +1601,43 @@ private extension Array {
         guard !isEmpty else { return self }
         let n = ((amount % count) + count) % count
         return Array(self[n...] + self[..<n])
+    }
+}
+
+/// The batteries of the Bluetooth devices connected: the three lowest, each with a bar.
+struct DevicesWidget: View {
+    @ObservedObject var batteries: BluetoothBatteries
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            WidgetHeader(widget: .devices)
+            Spacer(minLength: 0)
+            if batteries.devices.isEmpty {
+                Image(systemName: "dot.radiowaves.left.and.right").font(.system(size: 22)).frame(maxWidth: .infinity)
+                Text("None connected").font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.55)).frame(maxWidth: .infinity)
+            } else {
+                ForEach(batteries.devices.prefix(3)) { device in
+                    VStack(alignment: .leading, spacing: 3) {
+                        HStack(spacing: 4) {
+                            Image(systemName: device.symbol).font(.system(size: 9)).frame(width: 12)
+                            Text("\(device.level)%").font(.system(size: 10, weight: .bold, design: .rounded).monospacedDigit())
+                            Spacer(minLength: 0)
+                        }
+                        GeometryReader { proxy in
+                            ZStack(alignment: .leading) {
+                                Capsule().fill(Color.white.opacity(0.12))
+                                Capsule().fill(device.low ? Color.red : Color.green)
+                                    .frame(width: proxy.size.width * CGFloat(device.level) / 100)
+                            }
+                        }
+                        .frame(height: 4)
+                    }
+                    .help("\(device.name): \(device.summary)")
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .onAppear { BluetoothBatteries.shared.start() }
     }
 }

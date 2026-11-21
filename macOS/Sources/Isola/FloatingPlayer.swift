@@ -112,6 +112,7 @@ final class FloatingPlayer: ObservableObject {
 
 struct FloatingPlayerView: View {
     @ObservedObject var monitor: NowPlayingMonitor
+    @ObservedObject var lyrics = Lyrics.shared
     let player: FloatingPlayer
     @State private var scrubFraction: Double?
     @State private var hovering = false
@@ -159,10 +160,15 @@ struct FloatingPlayerView: View {
                     Text(monitor.title)
                         .font(.system(size: 13, weight: .bold))
                         .lineLimit(1)
-                    Text(monitor.artist)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.62))
-                        .lineLimit(1)
+                    if Lyrics.shared.lines.isEmpty {
+                        Text(monitor.artist)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.62))
+                            .lineLimit(1)
+                    } else {
+                        // Room for one line: the words, while there are any, in place of the artist.
+                        LyricLine(size: 11)
+                    }
                     Spacer(minLength: 2)
                     scrubber
                         .disabled(monitor.isBackground)

@@ -25,6 +25,8 @@ enum Prefs {
     static let hideSystemHUD = "live.hideSystemHUD"
     static let liveCharging = "live.charging"
     static let liveHeadphones = "live.headphones"
+    static let hideInFullScreen = "island.hideInFullScreen"
+    static let lyrics = "media.lyrics"
     static let liveDrives = "live.drives"
     static let liveVPN = "live.vpn"
     static let shakeBasket = "shakeBasket"
@@ -92,6 +94,8 @@ enum Prefs {
             hideSystemHUD: true,
             liveCharging: true,
             liveHeadphones: true,
+            hideInFullScreen: true,
+            lyrics: false,
             liveDrives: true,
             liveVPN: true,
             shakeBasket: true,

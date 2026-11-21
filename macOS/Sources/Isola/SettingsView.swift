@@ -90,9 +90,9 @@ extension SettingsPage {
     var keywords: String {
         switch self {
         case .general: return "login start update memory welcome tour about quit"
-        case .island: return "hover click scroll open gestures swipe keyboard shortcut tabs haptic"
+        case .island: return "hover click scroll open gestures swipe keyboard shortcut tabs haptic lyrics words song media"
         case .look: return "display screen style notch floating glass black material width height gap artwork tint"
-        case .activities: return "volume brightness charging battery headphones airpods drives vpn hud timer"
+        case .activities: return "volume brightness charging battery headphones airpods bluetooth mouse keyboard trackpad controller drives vpn hud timer full screen"
         case .tray: return "files drag drop basket shake downloads folder convert zip pdf"
         case .clipboard: return "copy paste history pinned limit"
         case .tools: return "ring capture screenshot markup text ocr dictate snap windows calls mute menu bar"
@@ -516,10 +516,12 @@ struct DisplaySettings: View {
     @AppStorage(Prefs.floatingGap) private var floatingGap = 3.0
     @AppStorage(Prefs.appleIsland) private var appleIsland = AppleIsland.auto
     @AppStorage(Prefs.menuOverhang) private var menuOverhang = 8.0
+    @AppStorage(Prefs.hideInFullScreen) private var hideInFullScreen = true
 
     var body: some View {
         Form {
             Section("Where") {
+                Toggle("Hide in full-screen apps and videos", isOn: $hideInFullScreen)
                 Picker("Show island on", selection: $display) {
                     ForEach(DisplayChoice.allCases) { Text($0.title).tag($0) }
                 }
@@ -570,6 +572,7 @@ struct DisplaySettings: View {
 }
 
 struct OpeningSettings: View {
+    @AppStorage(Prefs.lyrics) private var lyrics = false
     @AppStorage(Prefs.openWith) private var openWith: OpenWith = .hover
     @AppStorage(Prefs.hoverDelay) private var hoverDelay = 0.12
     @AppStorage(Prefs.hoverArea) private var hoverArea: HoverArea = .near
@@ -630,6 +633,12 @@ struct OpeningSettings: View {
 
             ShortcutSettings()
 
+            Section("Media") {
+                Toggle("Show the words of the song as it plays", isOn: $lyrics)
+                Text("The line being sung shows under the artist. Isola asks LRCLIB, a free lyrics library, for the song's words, sending only its title, artist and length.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
             Section("Tabs") {
                 ForEach(IslandTab.allCases) { TabToggle(tab: $0) }
             }
@@ -668,7 +677,7 @@ struct ActivitySettings: View {
                 Toggle("Volume", isOn: $liveVolume)
                 Toggle("Brightness", isOn: $liveBrightness)
                 Toggle("Charging and low battery", isOn: $liveCharging)
-                Toggle("Headphones and AirPods connecting", isOn: $liveHeadphones)
+                Toggle("Bluetooth devices connecting, with their battery, and running low", isOn: $liveHeadphones)
                 Toggle("Drives, with an Eject button", isOn: $liveDrives)
                 Toggle("VPN connecting and disconnecting", isOn: $liveVPN)
                 Text("Headphones need Bluetooth permission the first time.")
