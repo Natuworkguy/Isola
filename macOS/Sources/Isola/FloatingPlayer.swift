@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import SwiftUI
 
 /// The music in a small window of its own, anywhere on the desktop and on every Space. Drag it by any part that isn't a
@@ -12,6 +13,15 @@ final class FloatingPlayer: ObservableObject {
     private var dragFrom: (mouse: NSPoint, origin: NSPoint)?
     private static let frameName = "IsolaFloatingPlayer"
     private static let size = NSSize(width: 330, height: 104)
+    /// Each other app playing adds a row under the main card.
+    static let rowHeight: CGFloat = 46
+    private var watch: AnyCancellable?
+
+    /// How tall it is with COUNT apps playing (the main card, then a row for each of the others, at most four).
+    static func height(players count: Int) -> CGFloat {
+        let rows = min(max(count - 1, 0), 4)
+        return size.height + (rows > 0 ? CGFloat(rows) * rowHeight + 10 : 0)
+    }
 
     /// Opens it again at launch if it was open when Isola quit.
     func restore() {
@@ -67,9 +77,30 @@ final class FloatingPlayer: ObservableObject {
         host.frame = NSRect(origin: .zero, size: Self.size)
         panel.contentView = host
         place(panel)
+        // Grows down from its top edge as other apps start playing, and shrinks back as they stop.
+        watch = AppState.shared.nowPlaying.$players
+            .map(\.count)
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self, weak panel] count in
+                guard let panel else { return }
+                self?.fit(panel, players: count)
+            }
         // Puts it back where it was last time, if there was a last time.
         panel.setFrameAutosaveName(Self.frameName)
         return panel
+    }
+
+    private func fit(_ panel: NSPanel, players: Int) {
+        let height = Self.height(players: players)
+        guard abs(panel.frame.height - height) > 0.5 else { return }
+        var frame = panel.frame
+        frame.origin.y += frame.height - height
+        frame.size.height = height
+        // Kept on screen when it would grow past the bottom.
+        if let screen = panel.screen?.visibleFrame, frame.minY < screen.minY + 8 { frame.origin.y = screen.minY + 8 }
+        panel.contentView?.frame = NSRect(origin: .zero, size: frame.size)
+        panel.animator().setFrame(frame, display: true)
     }
 
     /// The bottom right corner of the main screen.
@@ -86,9 +117,24 @@ struct FloatingPlayerView: View {
     @State private var hovering = false
 
     var body: some View {
-        content
-            .padding(12)
-            .frame(width: 330, height: 104)
+        VStack(spacing: 0) {
+            content
+                .padding(12)
+                .frame(width: 330, height: 104)
+            if monitor.players.count > 1 {
+                VStack(spacing: 0) {
+                    ForEach(Array(monitor.players.dropFirst().prefix(4))) { other in
+                        MiniPlayerRow(player: other, monitor: monitor)
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                    }
+                }
+                .padding(.horizontal, 10)
+                .padding(.bottom, 10)
+                .overlay(alignment: .top) { Rectangle().fill(Color.white.opacity(0.08)).frame(height: 1).padding(.horizontal, 14) }
+            }
+        }
+            .frame(width: 330, height: FloatingPlayer.height(players: monitor.players.count), alignment: .top)
+            .animation(.smooth(duration: 0.3), value: monitor.players.map(\.id))
             .background(VisualEffectBlur())
             .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(Color.white.opacity(0.1)))
@@ -201,6 +247,56 @@ struct FloatingPlayerView: View {
                 .frame(width: 28, height: 22)
                 .contentTransition(.symbolEffect(.replace))
                 .animation(.snappy(duration: 0.25), value: symbol)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// Another app playing, as a row under the floating player's main card: its cover, what it plays, and its controls,
+/// or, for an app the Mac's media commands can't reach, a click that brings it forward.
+struct MiniPlayerRow: View {
+    let player: NowPlayer
+    @ObservedObject var monitor: NowPlayingMonitor
+    @State private var hovering = false
+
+    var body: some View {
+        HStack(spacing: 10) {
+            ArtworkView(image: player.artwork, icon: player.icon, size: 32, radius: 7)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(player.info.title.isEmpty ? player.name : player.info.title)
+                    .font(.system(size: 12, weight: .semibold))
+                    .lineLimit(1)
+                Text(player.info.artist.isEmpty ? player.name : "\(player.info.artist) · \(player.name)")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.55))
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 6)
+            if player.controllable {
+                button(player.isPlaying ? "pause.fill" : "play.fill", 14, .playPause)
+                button("forward.fill", 11, .next)
+            } else {
+                EqualizerView(color: player.tint)
+                Image(systemName: "arrow.up.forward.app")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.white.opacity(hovering ? 0.9 : 0.45))
+            }
+        }
+        .padding(.horizontal, 6)
+        .frame(height: FloatingPlayer.rowHeight)
+        .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color.white.opacity(hovering ? 0.08 : 0)))
+        .contentShape(Rectangle())
+        .onTapGesture { if !player.controllable { monitor.reveal(player) } }
+        .onHover { hovering = $0 }
+        .help(player.controllable ? player.name : "Bring \(player.name) forward")
+    }
+
+    private func button(_ symbol: String, _ size: CGFloat, _ command: NowPlayingMonitor.Command) -> some View {
+        Button { monitor.perform(command, on: player) } label: {
+            Image(systemName: symbol)
+                .font(.system(size: size))
+                .frame(width: 24, height: 24)
+                .contentTransition(.symbolEffect(.replace))
         }
         .buttonStyle(.plain)
     }

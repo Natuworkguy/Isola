@@ -5,7 +5,7 @@ extension Notification.Name {
     static let isolaOpenSettings = Notification.Name("IsolaOpenSettings")
 }
 
-final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, NSWindowDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private var notch: NotchController?
     private var statusItem: NSStatusItem?
     private var settingsWindow: NSWindow?
@@ -176,29 +176,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     @objc private func openSettings() {
         if settingsWindow == nil {
             let window = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 780, height: 640),
+                contentRect: NSRect(x: 0, y: 0, width: 860, height: 660),
                 styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
                 backing: .buffered,
                 defer: false
             )
             window.title = "Isola Settings"
             window.titlebarAppearsTransparent = true
-            window.toolbarStyle = .unified
+            window.titleVisibility = .hidden
+            window.isMovableByWindowBackground = true
+            window.minSize = NSSize(width: 820, height: 600)
             window.isReleasedWhenClosed = false
             window.contentView = NSHostingView(rootView: SettingsView())
             window.center()
-            window.delegate = self
+            window.setFrameAutosaveName("IsolaSettings")
             settingsWindow = window
         }
         // An ordinary app, with a Dock icon, while Settings is open. Screen Time only sees apps that come to the front:
         // this is where it asks for more time when Isola is limited, and what lists Isola so it can be Always Allowed.
-        NSApp.setActivationPolicy(.regular)
-        NSApp.activate(ignoringOtherApps: true)
-        settingsWindow?.makeKeyAndOrderFront(nil)
-    }
-
-    func windowWillClose(_ notification: Notification) {
-        guard (notification.object as? NSWindow) === settingsWindow else { return }
-        NSApp.setActivationPolicy(.accessory)
+        if let settingsWindow { DockPresence.show(settingsWindow) }
     }
 }

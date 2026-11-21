@@ -9,8 +9,11 @@ struct NowPlayer: Identifiable {
     let icon: NSImage?
     let artwork: NSImage?
     let tint: Color
-    /// The app macOS reports as now playing: the only one the Mac's media commands reach.
+    /// The app macOS reports as now playing, or Music or Spotify, which Isola asks directly: the ones it can
+    /// play, pause and skip.
     let controllable: Bool
+    /// Music or Spotify, when this card is one of them: commands go to the app itself.
+    var script: PlayerApp? = nil
 
     var isPlaying: Bool { info.isPlaying }
 }
@@ -41,6 +44,9 @@ final class NowPlayingMonitor: ObservableObject {
     fileprivate var shown: MediaInfo?
     /// The last report from each app that was playing when it was last heard from.
     private var remembered: [String: MediaInfo] = [:]
+    /// Everything else making sound that macOS doesn't report: Music and Spotify as they say they are (asked every
+    /// couple of seconds), any other app by its name.
+    private var others: [(info: MediaInfo, script: PlayerApp?)] = []
     private var lastBackgroundCheck = Date.distantPast
     fileprivate var scriptApp: PlayerApp?
     fileprivate var scriptTimer: Timer?
@@ -52,6 +58,7 @@ final class NowPlayingMonitor: ObservableObject {
     private var playersSignature = ""
     private var artworkCache: [String: (signature: String, image: NSImage?, tint: Color)] = [:]
     private var appCache: [String: (name: String, icon: NSImage?)] = [:]
+    fileprivate var scriptCovers: [String: (key: String, data: Data?)] = [:]
 
     func start() {
         startScripts()
@@ -130,6 +137,11 @@ final class NowPlayingMonitor: ObservableObject {
             reveal(player)
             return
         }
+        if let app = player.script, player.id != latest?.bundleID {
+            _ = runScript("tell application \"\(app.rawValue)\" to \(command.verb)")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in self?.refreshBackground() }
+            return
+        }
         send(command)
     }
 
@@ -162,7 +174,7 @@ final class NowPlayingMonitor: ObservableObject {
     private func tick() {
         guard usingRemote else { return }
         // Other apps start and stop without macOS saying so: look again every couple of seconds.
-        if !remembered.isEmpty || !players.isEmpty, Date().timeIntervalSince(lastBackgroundCheck) > 2 {
+        if Date().timeIntervalSince(lastBackgroundCheck) > 2 {
             lastBackgroundCheck = Date()
             refreshBackground()
         }
@@ -215,6 +227,7 @@ final class NowPlayingMonitor: ObservableObject {
 
     private func refreshBackground() {
         let background = backgroundPlayers()
+        others = otherPlayers(skipping: Set(background.map(\.bundleID)))
         if latest?.isPlaying != true, let first = background.first {
             show(first, background: true)
         } else if let latest {
@@ -228,11 +241,53 @@ final class NowPlayingMonitor: ObservableObject {
         updatePlayers(background)
     }
 
+    /// Apps making sound that macOS doesn't report and Isola hasn't heard from: what CoreAudio says is playing,
+    /// helper processes counted as their app (a browser's tab plays from a helper), Isola itself and system
+    /// processes left out. Music and Spotify are asked what they play, so their cards have the track and controls.
+    private func otherPlayers(skipping known: Set<String>) -> [(info: MediaInfo, script: PlayerApp?)] {
+        let playing = AudioActivity.playingBundleIDs()
+        var apps: [String] = []
+        let running = NSWorkspace.shared.runningApplications.filter { $0.activationPolicy == .regular }
+        for id in playing {
+            var owner = running.first { app in
+                guard let bundle = app.bundleIdentifier else { return false }
+                return id == bundle || id.hasPrefix(bundle + ".")
+            }?.bundleIdentifier
+            // Safari's tabs play through WebKit's own processes.
+            if owner == nil, id.hasPrefix("com.apple.WebKit"),
+               running.contains(where: { $0.bundleIdentifier == "com.apple.Safari" }) { owner = "com.apple.Safari" }
+            guard let owner, owner != Bundle.main.bundleIdentifier, owner != latest?.bundleID,
+                  !known.contains(owner), !apps.contains(owner) else { continue }
+            apps.append(owner)
+        }
+        // Music and Spotify paused in the background still get a card, so they can be resumed from it.
+        for app in [PlayerApp.music, .spotify] where isRunning(app) && !apps.contains(app.bundleID)
+            && app.bundleID != latest?.bundleID && !known.contains(app.bundleID) {
+            apps.append(app.bundleID)
+        }
+        return apps.compactMap { bundle -> (info: MediaInfo, script: PlayerApp?)? in
+            if let app = PlayerApp(bundle: bundle) {
+                guard let line = runScript(app.infoScript) else { return nil }
+                let parts = line.components(separatedBy: "|||")
+                guard parts.count == 5, parts[0] != "stopped" else { return nil }
+                let info = MediaInfo(bundleID: bundle, title: parts[1], artist: parts[2], isPlaying: parts[0] == "playing",
+                                     duration: Double(parts[4]) ?? 0, elapsed: Double(parts[3]) ?? 0,
+                                     timestamp: Date(), rate: 1, artworkData: scriptArtwork(app, title: parts[1], artist: parts[2]))
+                return (info, app)
+            }
+            let info = MediaInfo(bundleID: bundle, title: "", artist: "Playing sound", isPlaying: true, duration: 0,
+                                 elapsed: 0, timestamp: Date(), rate: 1, artworkData: nil)
+            return (info, nil)
+        }
+    }
+
     /// The list for the Media tab: the app on screen first, then whatever else is playing, newest first, then the
     /// reported app if it is paused (it can still be resumed from there).
     private func updatePlayers(_ background: [MediaInfo]) {
-        var entries = background.map { (info: $0, controllable: false) }
-        if let latest { entries.append((latest, true)) }
+        var entries = background.map { (info: $0, controllable: false, script: PlayerApp(bundle: $0.bundleID)) }
+        for (i, entry) in entries.enumerated() where entry.script != nil { entries[i].controllable = true }
+        entries += others.map { (info: $0.info, controllable: $0.script != nil, script: $0.script) }
+        if let latest { entries.append((latest, true, PlayerApp(bundle: latest.bundleID))) }
         guard entries.count > 1 else {
             if !players.isEmpty { withAnimation(.smooth(duration: 0.3)) { players = [] } }
             playersSignature = ""
@@ -247,11 +302,11 @@ final class NowPlayingMonitor: ObservableObject {
         // A background player was playing when last heard from and still makes sound, so it counts as playing.
         let list = entries.map { entry -> NowPlayer in
             var info = entry.info
-            if !entry.controllable { info.isPlaying = true }
+            if entry.script == nil && info.bundleID != latest?.bundleID { info.isPlaying = true }
             let app = appIdentity(info.bundleID)
             let art = artwork(for: info)
             return NowPlayer(info: info, name: app.name, icon: app.icon, artwork: art.image, tint: art.tint,
-                             controllable: entry.controllable)
+                             controllable: entry.controllable, script: entry.script)
         }
         let signature = list.map { "\($0.id)|\($0.info.title)|\($0.info.artist)|\($0.isPlaying)|\($0.controllable)|\($0.info.elapsed)" }
             .joined(separator: "\n")
@@ -322,6 +377,14 @@ enum PlayerApp: String {
     case music = "Music"
     case spotify = "Spotify"
 
+    init?(bundle: String) {
+        switch bundle {
+        case "com.apple.Music": self = .music
+        case "com.spotify.client": self = .spotify
+        default: return nil
+        }
+    }
+
     var bundleID: String {
         switch self {
         case .music: return "com.apple.Music"
@@ -363,7 +426,7 @@ extension NowPlayingMonitor {
         }
     }
 
-    private func isRunning(_ app: PlayerApp) -> Bool {
+    fileprivate func isRunning(_ app: PlayerApp) -> Bool {
         !NSRunningApplication.runningApplications(withBundleIdentifier: app.bundleID).isEmpty
     }
 
@@ -419,6 +482,29 @@ extension NowPlayingMonitor {
                     if self?.scriptArtworkKey == key { self?.artwork = image }
                 }
             }.resume()
+        }
+    }
+
+    /// The cover of what Music or Spotify plays, for its card in the list: fetched once a track.
+    fileprivate func scriptArtwork(_ app: PlayerApp, title: String, artist: String) -> Data? {
+        let key = "\(title)|\(artist)"
+        if let cached = scriptCovers[app.bundleID], cached.key == key { return cached.data }
+        scriptCovers[app.bundleID] = (key, nil)
+        switch app {
+        case .music:
+            let data = runScriptDescriptor("tell application \"Music\" to return data of artwork 1 of current track")?.data
+            scriptCovers[app.bundleID] = (key, data)
+            return data
+        case .spotify:
+            guard let link = runScript("tell application \"Spotify\" to return artwork url of current track"),
+                  let url = URL(string: link), url.scheme == "https" else { return nil }
+            URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
+                DispatchQueue.main.async {
+                    guard let self, self.scriptCovers[app.bundleID]?.key == key else { return }
+                    self.scriptCovers[app.bundleID] = (key, data)
+                }
+            }.resume()
+            return nil
         }
     }
 

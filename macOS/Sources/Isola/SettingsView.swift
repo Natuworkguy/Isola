@@ -62,64 +62,302 @@ enum SettingsPage: String, CaseIterable, Identifiable {
     }
 }
 
-/// A page's icon: its symbol in white on a rounded square of its colour.
+/// A page's icon: its symbol on a soft rounded square, tinted with the page's colour. Quiet in the sidebar, where
+/// only the chosen page's icon fills with colour.
 struct SettingsIcon: View {
     let page: SettingsPage
     var size: CGFloat = 20
+    var filled = true
 
     var body: some View {
-        RoundedRectangle(cornerRadius: size * 0.27, style: .continuous)
-            .fill(page.tint.gradient)
+        RoundedRectangle(cornerRadius: size * 0.3, style: .continuous)
+            .fill(filled ? AnyShapeStyle(page.tint.gradient) : AnyShapeStyle(Color.primary.opacity(0.06)))
             .frame(width: size, height: size)
-            .overlay(Image(systemName: page.symbol).font(.system(size: size * 0.52, weight: .semibold)).foregroundStyle(.white))
-            .shadow(color: .black.opacity(0.15), radius: 0.5, y: 0.5)
+            .overlay(
+                Image(systemName: page.symbol)
+                    .font(.system(size: size * 0.5, weight: .semibold))
+                    .foregroundStyle(filled ? AnyShapeStyle(.white) : AnyShapeStyle(.secondary))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: size * 0.3, style: .continuous)
+                    .strokeBorder(.white.opacity(filled ? 0.18 : 0), lineWidth: 0.5)
+            )
+    }
+}
+
+extension SettingsPage {
+    /// Words a search finds this page by, besides its title and blurb.
+    var keywords: String {
+        switch self {
+        case .general: return "login start update memory welcome tour about quit"
+        case .island: return "hover click scroll open gestures swipe keyboard shortcut tabs haptic"
+        case .look: return "display screen style notch floating glass black material width height gap artwork tint"
+        case .activities: return "volume brightness charging battery headphones airpods drives vpn hud timer"
+        case .tray: return "files drag drop basket shake downloads folder convert zip pdf"
+        case .clipboard: return "copy paste history pinned limit"
+        case .tools: return "ring capture screenshot markup text ocr dictate snap windows calls mute menu bar"
+        case .notifications: return "banner notify link lock screen activity"
+        }
     }
 }
 
 struct SettingsView: View {
-    @State private var page: SettingsPage? = .general
+    @State private var page: SettingsPage = .general
+    @State private var query = ""
+    @Namespace private var selection
+
+    private var pages: [SettingsPage] {
+        let q = query.trimmingCharacters(in: .whitespaces).lowercased()
+        guard !q.isEmpty else { return SettingsPage.allCases }
+        return SettingsPage.allCases.filter {
+            "\($0.title) \($0.blurb) \($0.keywords)".lowercased().contains(q)
+        }
+    }
 
     var body: some View {
-        NavigationSplitView {
-            List(SettingsPage.allCases, selection: $page) { page in
-                Label { Text(page.title) } icon: { SettingsIcon(page: page) }
-                    .tag(page)
-                    .padding(.vertical, 2)
-            }
-            .navigationSplitViewColumnWidth(200)
-        } detail: {
-            let shown = page ?? .general
-            VStack(spacing: 0) {
-                HStack(spacing: 14) {
-                    SettingsIcon(page: shown, size: 40)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(shown.title).font(.system(size: 20, weight: .semibold))
-                        Text(shown.blurb).font(.callout).foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                }
-                .padding(.horizontal, 28)
-                .padding(.top, 18)
-                .padding(.bottom, 4)
-                Group {
-                    switch shown {
-                    case .general: GeneralSettings()
-                    case .island: OpeningSettings()
-                    case .look: DisplaySettings()
-                    case .activities: ActivitySettings()
-                    case .tray: TraySettings()
-                    case .clipboard: ClipboardSettings()
-                    case .tools: ToolSettings()
-                    case .notifications: NotifySettings()
-                    }
-                }
-                .id(shown)
-                .transition(.opacity)
-            }
-            .animation(.easeOut(duration: 0.15), value: page)
+        HStack(spacing: 0) {
+            sidebar
+                .frame(width: 228)
+                .background(VisualEffect(material: .sidebar).ignoresSafeArea())
+            Rectangle().fill(Color.primary.opacity(0.08)).frame(width: 1).ignoresSafeArea()
+            detail
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color(nsColor: .windowBackgroundColor).ignoresSafeArea())
         }
-        .frame(minWidth: 780, idealWidth: 780, minHeight: 600, idealHeight: 640)
+        .ignoresSafeArea(.container, edges: .top)
+        .frame(minWidth: 820, idealWidth: 860, minHeight: 600, idealHeight: 660)
     }
+
+    private var sidebar: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Room for the window's buttons, which sit over the sidebar.
+            Color.clear.frame(height: 40)
+            HStack(spacing: 10) {
+                IslandMark().frame(width: 34, height: 34)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Isola").font(.system(size: 15, weight: .semibold, design: .rounded))
+                    Text("Version \(Updater.version)").font(.system(size: 11)).foregroundStyle(.secondary)
+                }
+            }
+            .padding(.horizontal, 18)
+            .padding(.bottom, 14)
+
+            HStack(spacing: 6) {
+                Image(systemName: "magnifyingglass").font(.system(size: 12)).foregroundStyle(.secondary)
+                TextField("Search", text: $query).textFieldStyle(.plain).font(.system(size: 13))
+                if !query.isEmpty {
+                    Button { query = "" } label: { Image(systemName: "xmark.circle.fill") }
+                        .buttonStyle(.plain).foregroundStyle(.tertiary)
+                }
+            }
+            .padding(.horizontal, 9)
+            .frame(height: 28)
+            .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color.primary.opacity(0.06)))
+            .padding(.horizontal, 12)
+            .padding(.bottom, 12)
+
+            ScrollView {
+                VStack(spacing: 2) {
+                    ForEach(pages) { item in row(item) }
+                    if pages.isEmpty {
+                        Text("Nothing matches “\(query)”.")
+                            .font(.callout).foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 10).padding(.top, 6)
+                    }
+                }
+                .padding(.horizontal, 10)
+            }
+            .scrollIndicators(.never)
+
+            Spacer(minLength: 0)
+            HStack {
+                Button { Onboarding.show() } label: { Label("Welcome tour", systemImage: "sparkles") }
+                Spacer()
+                Button { NSApp.terminate(nil) } label: { Image(systemName: "power") }
+                    .help("Quit Isola")
+            }
+            .buttonStyle(.plain)
+            .font(.system(size: 12))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 14)
+        }
+        .onChange(of: query) { _, _ in
+            if let first = pages.first, !pages.contains(page) { page = first }
+        }
+    }
+
+    private func row(_ item: SettingsPage) -> some View {
+        let chosen = item == page
+        return Button {
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) { page = item }
+        } label: {
+            HStack(spacing: 10) {
+                SettingsIcon(page: item, size: 22, filled: chosen)
+                Text(item.title)
+                    .font(.system(size: 13, weight: chosen ? .semibold : .regular))
+                    .foregroundStyle(chosen ? .primary : .secondary)
+                Spacer()
+            }
+            .padding(.horizontal, 8)
+            .frame(height: 32)
+            .contentShape(Rectangle())
+            .background {
+                if chosen {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.primary.opacity(0.08))
+                        .matchedGeometryEffect(id: "chosen", in: selection)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var detail: some View {
+        VStack(spacing: 0) {
+            HStack(alignment: .center, spacing: 14) {
+                SettingsIcon(page: page, size: 36)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(page.title).font(.system(size: 22, weight: .semibold, design: .rounded))
+                    Text(page.blurb).font(.system(size: 12.5)).foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+            .padding(.horizontal, 32)
+            .padding(.top, 34)
+            .padding(.bottom, 6)
+
+            if page == .island || page == .look || page == .general {
+                IslandPreview()
+                    .frame(height: 118)
+                    .padding(.horizontal, 32)
+                    .padding(.top, 12)
+                    .padding(.bottom, 2)
+            }
+
+            Group {
+                switch page {
+                case .general: GeneralSettings()
+                case .island: OpeningSettings()
+                case .look: DisplaySettings()
+                case .activities: ActivitySettings()
+                case .tray: TraySettings()
+                case .clipboard: ClipboardSettings()
+                case .tools: ToolSettings()
+                case .notifications: NotifySettings()
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .id(page)
+            .transition(.opacity.combined(with: .offset(y: 6)))
+        }
+        .animation(.easeOut(duration: 0.18), value: page)
+    }
+}
+
+/// Isola's mark: a small island on a dark tile, glowing faintly.
+struct IslandMark: View {
+    var body: some View {
+        RoundedRectangle(cornerRadius: 9, style: .continuous)
+            .fill(LinearGradient(colors: [Color(white: 0.22), Color(white: 0.06)], startPoint: .top, endPoint: .bottom))
+            .overlay(
+                Capsule().fill(.black)
+                    .frame(width: 20, height: 7)
+                    .overlay(Capsule().strokeBorder(.white.opacity(0.25), lineWidth: 0.5))
+                    .overlay(alignment: .trailing) { Circle().fill(.green).frame(width: 3, height: 3).padding(.trailing, 3) }
+                    .offset(y: -7)
+            )
+            .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous).strokeBorder(.white.opacity(0.12), lineWidth: 0.5))
+            .shadow(color: .black.opacity(0.25), radius: 3, y: 1)
+    }
+}
+
+/// The island as the settings shape it: a strip of desktop with a menu bar, and the island at its top, its size,
+/// style and material taken from the settings below as they change. It breathes open now and then, so you see both.
+struct IslandPreview: View {
+    @AppStorage(Prefs.style) private var style: IslandStyle = .auto
+    @AppStorage(Prefs.material) private var material: IslandMaterial = .glass
+    @AppStorage(Prefs.idleWidth) private var idleWidth = 150.0
+    @AppStorage(Prefs.idleHeight) private var idleHeight = 30.0
+    @AppStorage(Prefs.floatingGap) private var floatingGap = 3.0
+    @State private var open = false
+    private let beat = Timer.publish(every: 2.6, on: .main, in: .common).autoconnect()
+
+    var body: some View {
+        GeometryReader { geo in
+            let scale = min(1, geo.size.width / 640)
+            let floating = style == .floating
+            let width = CGFloat(open ? 330 : idleWidth) * scale
+            let height = CGFloat(open ? 84 : idleHeight) * scale
+            ZStack(alignment: .top) {
+                LinearGradient(colors: [Color(red: 0.36, green: 0.42, blue: 0.78), Color(red: 0.86, green: 0.55, blue: 0.62),
+                                        Color(red: 0.98, green: 0.78, blue: 0.58)],
+                               startPoint: .topLeading, endPoint: .bottomTrailing)
+                Rectangle().fill(.ultraThinMaterial).frame(height: 18)
+                    .overlay(alignment: .leading) {
+                        HStack(spacing: 10) {
+                            Image(systemName: "apple.logo").font(.system(size: 9))
+                            ForEach(["Finder", "File", "Edit", "View"], id: \.self) { Text($0).font(.system(size: 9, weight: .medium)) }
+                        }
+                        .foregroundStyle(Color.primary.opacity(0.7))
+                        .padding(.leading, 12)
+                    }
+                    .frame(maxHeight: .infinity, alignment: .top)
+                islandShape(open: open, floating: floating)
+                    .frame(width: width, height: height)
+                    .overlay {
+                        if open {
+                            HStack(spacing: 8) {
+                                RoundedRectangle(cornerRadius: 6).fill(LinearGradient(colors: [.orange, .pink], startPoint: .top, endPoint: .bottom))
+                                    .frame(width: 34 * scale, height: 34 * scale)
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Capsule().fill(.white.opacity(0.9)).frame(width: 90 * scale, height: 5)
+                                    Capsule().fill(.white.opacity(0.4)).frame(width: 60 * scale, height: 4)
+                                }
+                                Spacer()
+                                Image(systemName: "pause.fill").font(.system(size: 12 * scale)).foregroundStyle(.white)
+                            }
+                            .padding(.horizontal, 16 * scale)
+                            .transition(.opacity)
+                        }
+                    }
+                    .padding(.top, floating ? CGFloat(floatingGap) * scale + 2 : 0)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Color.primary.opacity(0.1)))
+            .shadow(color: .black.opacity(0.08), radius: 8, y: 3)
+        }
+        .onReceive(beat) { _ in withAnimation(.spring(response: 0.55, dampingFraction: 0.8)) { open.toggle() } }
+        .accessibilityLabel("Preview of the island")
+    }
+
+    @ViewBuilder
+    private func islandShape(open: Bool, floating: Bool) -> some View {
+        let radius: CGFloat = open ? 22 : 12
+        let shape = UnevenRoundedRectangle(topLeadingRadius: floating ? radius : 0, bottomLeadingRadius: radius,
+                                           bottomTrailingRadius: radius, topTrailingRadius: floating ? radius : 0,
+                                           style: .continuous)
+        if material == .glass {
+            shape.fill(.black.opacity(0.55)).background(.ultraThinMaterial, in: shape)
+                .overlay(shape.stroke(.white.opacity(0.2), lineWidth: 0.5))
+        } else {
+            shape.fill(.black)
+        }
+    }
+}
+
+/// An AppKit blur behind SwiftUI content.
+struct VisualEffect: NSViewRepresentable {
+    var material: NSVisualEffectView.Material = .sidebar
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.material = material
+        view.blendingMode = .behindWindow
+        view.state = .followsWindowActive
+        return view
+    }
+    func updateNSView(_ view: NSVisualEffectView, context: Context) { view.material = material }
 }
 
 /// The File Tray: what drags do, and folders whose new files go into it.

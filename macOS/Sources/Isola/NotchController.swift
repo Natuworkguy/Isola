@@ -138,7 +138,7 @@ final class NotchController {
             guard let self else { return event }
             // Only the island's own: a scroll in Settings, or any other of Isola's windows, is that window's to
             // scroll, not a swipe that opens the island.
-            guard event.window === self.panel else { return event }
+            guard event.window === self.panel, self.pointerOnIsland() else { return event }
             return self.handleScroll(event) ? nil : event
         }
         // Scrolls next to the island go to the app underneath, so they are watched from outside too: set to open by
@@ -146,7 +146,7 @@ final class NotchController {
         // swipes still open it with.
         globalScrollMonitor = NSEvent.addGlobalMonitorForEvents(matching: .scrollWheel) { [weak self] event in
             guard let self, !self.state.isExpanded, OpenWith.current == .scroll || self.clicksThrough,
-                  self.closedArea().contains(NSEvent.mouseLocation) else { return }
+                  self.closedArea().contains(NSEvent.mouseLocation), !self.pointerOnOwnWindow() else { return }
             _ = self.handleScroll(event)
         }
 
@@ -368,6 +368,27 @@ extension NotchController {
             let since = hoverSince ?? Date()
             hoverSince = since
             if Date().timeIntervalSince(since) >= defaults.double(forKey: Prefs.hoverDelay) { open(tab: nil) }
+        }
+    }
+
+    /// The pointer is over the island itself, with none of Isola's other windows (Settings, the welcome tour, the
+    /// floating player) on top of it there. A scroll is only a swipe on the island then: scrolling a list in Settings
+    /// that sits near the top of the screen used to open and close the island, because the island's panel is bigger
+    /// than the island and scrolls landed on it.
+    fileprivate func pointerOnIsland() -> Bool {
+        let point = NSEvent.mouseLocation
+        let area = state.isExpanded
+            ? islandRect(expanded: true).insetBy(dx: -4, dy: -4)
+            : islandRect(expanded: false).insetBy(dx: -12, dy: -12)
+        return area.contains(point) && !pointerOnOwnWindow()
+    }
+
+    /// One of Isola's ordinary windows is under the pointer, in front of whatever else is there.
+    fileprivate func pointerOnOwnWindow() -> Bool {
+        let point = NSEvent.mouseLocation
+        let top = NSWindow.windowNumber(at: point, belowWindowWithWindowNumber: 0)
+        return NSApp.windows.contains { window in
+            window !== panel && window !== searchPanel && window.isVisible && window.windowNumber == top
         }
     }
 

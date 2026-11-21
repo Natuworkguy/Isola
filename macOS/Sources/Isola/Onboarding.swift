@@ -10,7 +10,7 @@ enum Onboarding {
 
     static func show() {
         if let window {
-            window.makeKeyAndOrderFront(nil)
+            DockPresence.show(window)
             return
         }
         let made = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 620, height: 470),
@@ -21,9 +21,9 @@ enum Onboarding {
         made.isReleasedWhenClosed = false
         made.contentView = NSHostingView(rootView: OnboardingView { close() })
         made.center()
+        made.title = "Welcome to Isola"
         window = made
-        NSApp.activate(ignoringOtherApps: true)
-        made.makeKeyAndOrderFront(nil)
+        DockPresence.show(made)
     }
 
     static func close() {
