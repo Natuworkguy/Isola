@@ -29,6 +29,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         WatchedFolders.shared.start()
         Shortcuts.shared.start()
         CallControls.shared.start()
+        DownloadProgress.shared.start()
         MenuBarHider.shared.start()
         Updater.shared.start()
         if !UserDefaults.standard.bool(forKey: Prefs.onboarded) {

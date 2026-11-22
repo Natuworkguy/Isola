@@ -42,6 +42,8 @@ final class NowPlayingMonitor: ObservableObject {
     fileprivate var latest: MediaInfo?
     /// What is on screen: the latest report, or a background player standing in for it.
     fileprivate var shown: MediaInfo?
+    /// The app the card is showing (for Safari's own controls under it).
+    var shownBundleID: String? { shown?.bundleID }
     /// The last report from each app that was playing when it was last heard from.
     private var remembered: [String: MediaInfo] = [:]
     /// Everything else making sound that macOS doesn't report: Music and Spotify as they say they are (asked every
@@ -253,9 +255,20 @@ final class NowPlayingMonitor: ObservableObject {
                 guard let bundle = app.bundleIdentifier else { return false }
                 return id == bundle || id.hasPrefix(bundle + ".")
             }?.bundleIdentifier
-            // Safari's tabs play through WebKit's own processes.
-            if owner == nil, id.hasPrefix("com.apple.WebKit"),
-               running.contains(where: { $0.bundleIdentifier == "com.apple.Safari" }) { owner = "com.apple.Safari" }
+            // Safari's tabs (and its web apps' pages) play through WebKit's own processes: counted as Safari, or as
+            // the web app in front if Safari itself isn't open, or as Safari Technology Preview if only it is.
+            if owner == nil, id.hasPrefix("com.apple.WebKit") {
+                let ids = running.compactMap(\.bundleIdentifier)
+                if ids.contains("com.apple.Safari") {
+                    owner = "com.apple.Safari"
+                } else if ids.contains("com.apple.SafariTechnologyPreview") {
+                    owner = "com.apple.SafariTechnologyPreview"
+                } else {
+                    let front = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+                    owner = (front.map { $0.hasPrefix("com.apple.Safari.WebApp") } ?? false) ? front
+                        : ids.first { $0.hasPrefix("com.apple.Safari.WebApp") }
+                }
+            }
             guard let owner, owner != Bundle.main.bundleIdentifier, owner != latest?.bundleID,
                   !known.contains(owner), !apps.contains(owner) else { continue }
             apps.append(owner)

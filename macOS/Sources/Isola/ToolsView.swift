@@ -40,6 +40,19 @@ struct ToolsView: View {
             Tool(id: "mute", title: "Mute Mic", symbol: "mic.slash.fill",
                  colors: [Color(red: 1, green: 0.45, blue: 0.4), Color(red: 0.85, green: 0.2, blue: 0.2)],
                  keys: Shortcuts.Action.mute.label) { CallControls.shared.toggleMute() },
+            // the page in Safari's front window
+            Tool(id: "safariTray", title: "Page to Tray", symbol: "link.badge.plus",
+                 colors: [Color(red: 0.3, green: 0.6, blue: 1), Color(red: 0.1, green: 0.4, blue: 0.9)],
+                 keys: "Safari") { Safari.pageToTray() },
+            Tool(id: "safariRead", title: "Reading List", symbol: "eyeglasses",
+                 colors: [Color(red: 0.3, green: 0.6, blue: 1), Color(red: 0.1, green: 0.4, blue: 0.9)],
+                 keys: "Safari") { Safari.addToReadingList() },
+            Tool(id: "safariCopy", title: "Copy Link", symbol: "link",
+                 colors: [Color(red: 0.3, green: 0.6, blue: 1), Color(red: 0.1, green: 0.4, blue: 0.9)],
+                 keys: "Safari") { Safari.copyLink() },
+            Tool(id: "safariDrop", title: "AirDrop Page", symbol: "airplayaudio",
+                 colors: [Color(red: 0.3, green: 0.6, blue: 1), Color(red: 0.1, green: 0.4, blue: 0.9)],
+                 keys: "Safari") { close { Safari.airDrop() } },
         ]
     }
 

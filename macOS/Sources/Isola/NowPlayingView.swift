@@ -49,6 +49,11 @@ struct NowPlayingView: View {
                     .opacity(monitor.isBackground ? 0.35 : 1)
                     .frame(maxWidth: .infinity)
                     .padding(.top, 2)
+                    if Safari.isSafari(monitor.shownBundleID) && !monitor.isBackground {
+                        SafariMediaRow(title: monitor.title)
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 4)
+                    }
                 }
                 .frame(maxWidth: 300)
             }

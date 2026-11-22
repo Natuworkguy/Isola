@@ -100,6 +100,12 @@ specific to it.
   several play: every app making sound gets one, Music and Spotify with their track and their own controls, others by
   name with a click that brings them forward. Pop it out into a floating player that stays on the desktop, on every
   Space; it grows a row for each other app playing. Turn on lyrics and the line being sung shows under the artist.
+- **Safari:** when the sound is Safari's, the card has Tab (brings forward the tab that plays it), back and ahead ten
+  seconds, Speed and Picture in Picture (those last three need Develop, Allow JavaScript from Apple Events in Safari;
+  Isola says so if it's off). Downloads show their progress in the ears while they come in, with the speed and the
+  time left (Chrome's and Firefox's too, by size). In Tools: put the page in front into the File Tray as a link to drag
+  anywhere, add it to the Reading List, copy its link, or AirDrop it. Safari web apps (Add to Dock) and Safari
+  Technology Preview are recognised as themselves.
 - **Live Activities:** the island answers what is happening on your Mac.
   - Volume and brightness as a bar beside the notch.
   - Timers and alarms ring in the island with Stop and Repeat or Snooze: Isola's own Timer and Focus sessions, and
