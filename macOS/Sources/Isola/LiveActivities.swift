@@ -256,6 +256,9 @@ final class LiveActivities: NSObject {
 
     private var connectNotification: IOBluetoothUserNotification?
     private var headphonesSince = Date.distantFuture
+    /// When each device (by its address) was last announced: a device that drops and comes back is not news again
+    /// for a while.
+    private var announced: [String: Date] = [:]
 
     private func startHeadphones() {
         guard connectNotification == nil else { return }
@@ -275,6 +278,16 @@ final class LiveActivities: NSObject {
         // Already connected devices are reported straight after registering; those are not news.
         guard Date().timeIntervalSince(headphonesSince) > 3 else { return }
         let name = device.name ?? "Bluetooth device"
+        // An Apple Watch, an iPhone or an iPad keeps dropping its link to the Mac and making it again (for Handoff,
+        // unlocking, Continuity), all day long, without anyone doing anything: they are never news. Wearables are
+        // class 0x07, phones 0x02; a watch is also known by its name.
+        let major = device.deviceClassMajor
+        let lowered = name.lowercased()
+        if major == 0x07 || major == 0x02 || lowered.contains("watch") || lowered.contains("iphone") || lowered.contains("ipad") { return }
+        // Anything else that comes and goes: once in fifteen minutes at most.
+        let key = device.addressString ?? name
+        if let last = announced[key], Date().timeIntervalSince(last) < 15 * 60 { return }
+        announced[key] = Date()
         let audio = device.deviceClassMajor == 0x04
         // The battery levels arrive a moment after the connection: look them up then, for any kind of device.
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
