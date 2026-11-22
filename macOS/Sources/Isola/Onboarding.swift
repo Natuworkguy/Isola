@@ -49,15 +49,27 @@ struct OnboardingView: View {
     private let steps = 6
     private let tick = Timer.publish(every: 1.5, on: .main, in: .common).autoconnect()
     static let ease = Animation.timingCurve(0.32, 0.72, 0, 1, duration: 0.7)
+    /// The picture behind each page after the first (Resources/Tour-*.jpg).
+    static let pictures: [Int: String] = [1: "Tour-Shortcut", 2: "Tour-Opening", 3: "Tour-Try",
+                                          4: "Tour-Perms", 5: "Tour-Finish"]
 
     var body: some View {
         ZStack {
             // The film, made in Riptide: the island opening into a music card and a charging pill, over a drifting
-            // wallpaper. Full bright on the first page, frosted behind the others.
-            // It only plays on the first page; behind the others it holds still, frosted.
+            // wallpaper. It only plays on the first page.
             LoopingVideo(name: "Welcome", playing: step == 0).ignoresSafeArea()
-            Rectangle().fill(.ultraThinMaterial).opacity(step == 0 ? 0 : 1).ignoresSafeArea()
-            LinearGradient(colors: [.clear, .black.opacity(step == 0 ? 0.75 : 0.45)], startPoint: .center, endPoint: .bottom)
+            // Each page after it has a picture of its own, in the film's style: the island at the top doing what
+            // the page is about, over a wallpaper of the page's colours. One fades into the next.
+            if let picture = Self.pictures[step] {
+                TourPicture(name: picture).id(step)
+                    .transition(.opacity.animation(.easeInOut(duration: 0.6)))
+                    .ignoresSafeArea()
+                // Darker to the left and at the bottom, where the words are.
+                LinearGradient(colors: [.black.opacity(0.55), .black.opacity(0.12)], startPoint: .leading,
+                               endPoint: UnitPoint(x: 0.7, y: 0.5))
+                    .ignoresSafeArea()
+            }
+            LinearGradient(colors: [.clear, .black.opacity(step == 0 ? 0.75 : 0.55)], startPoint: .center, endPoint: .bottom)
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
@@ -529,6 +541,26 @@ extension AnyTransition {
 }
 
 /// A film from the app's resources, playing on a loop with no sound, filling its frame.
+/// A page's picture, filling the window, drifting a little closer while it is shown. Without the file it is the
+/// frosted film, as the pages had before.
+private struct TourPicture: View {
+    let name: String
+    @State private var near = false
+
+    var body: some View {
+        if let url = Bundle.main.url(forResource: name, withExtension: "jpg"), let image = NSImage(contentsOf: url) {
+            Image(nsImage: image)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .scaleEffect(near ? 1.045 : 1.0)
+                .clipped()
+                .onAppear { withAnimation(.easeOut(duration: 14)) { near = true } }
+        } else {
+            Rectangle().fill(.ultraThinMaterial)
+        }
+    }
+}
+
 struct LoopingVideo: NSViewRepresentable {
     let name: String
     var playing = true
