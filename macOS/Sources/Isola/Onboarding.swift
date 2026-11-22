@@ -41,6 +41,7 @@ struct OnboardingView: View {
     let done: () -> Void
     @State private var step = 0
     @State private var forward = true
+    @State private var layer = 0
     @State private var trusted = AXIsProcessTrusted()
     @State private var screen = CGPreflightScreenCaptureAccess()
     @State private var atLogin = SMAppService.mainApp.status == .enabled
@@ -56,14 +57,26 @@ struct OnboardingView: View {
     var body: some View {
         ZStack {
             // The film, made in Riptide: the island opening into a music card and a charging pill, over a drifting
-            // wallpaper. It only plays on the first page.
-            LoopingVideo(name: "Welcome", playing: step == 0).ignoresSafeArea()
+            // wallpaper. It is on the first page only, gone (not frozen) behind the others.
+            Color.black.ignoresSafeArea()
+            LoopingVideo(name: "Welcome", playing: step == 0)
+                .opacity(step == 0 ? 1 : 0)
+                .animation(.easeInOut(duration: 0.6), value: step)
+                .ignoresSafeArea()
             // Each page after it has a picture of its own, in the film's style: the island at the top doing what
-            // the page is about, over a wallpaper of the page's colours. One fades into the next.
-            if let picture = Self.pictures[step] {
-                TourPicture(name: picture).id(step)
-                    .transition(.opacity.animation(.easeInOut(duration: 0.6)))
-                    .ignoresSafeArea()
+            // the page is about, over a wallpaper of the page's colours. The new one fades in on top of the old,
+            // which stays whole until it is nearly covered, so nothing behind shows through, forward or back.
+            ZStack {
+                if let picture = Self.pictures[step] {
+                    TourPicture(name: picture).id(step)
+                        .zIndex(Double(layer))
+                        .transition(.asymmetric(
+                            insertion: .opacity.animation(.easeInOut(duration: 0.6)),
+                            removal: .opacity.animation(.easeInOut(duration: 0.35).delay(0.5))))
+                }
+            }
+            .ignoresSafeArea()
+            if Self.pictures[step] != nil {
                 // Darker to the left and at the bottom, where the words are.
                 LinearGradient(colors: [.black.opacity(0.55), .black.opacity(0.12)], startPoint: .leading,
                                endPoint: UnitPoint(x: 0.7, y: 0.5))
@@ -138,6 +151,7 @@ struct OnboardingView: View {
 
     private func go(_ to: Int) {
         forward = to > step
+        layer += 1
         withAnimation(Self.ease) { step = to }
     }
 
