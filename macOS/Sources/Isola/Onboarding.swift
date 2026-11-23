@@ -263,16 +263,15 @@ struct OnboardingView: View {
                 permission(0, "hand.raised.fill", "Accessibility",
                            "Snapping windows, typing what you dictate, and Isola's own volume and brightness bars.",
                            granted: trusted) {
-                    let prompt = kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String
-                    _ = AXIsProcessTrustedWithOptions([prompt: true] as CFDictionary)
+                    PermissionHelper.show(.accessibility)
                 }
                 permission(1, "rectangle.dashed.badge.record", "Screen Recording",
                            "Capturing part of the screen to mark it up or read its text.", granted: screen) {
-                    _ = CGRequestScreenCaptureAccess()
+                    PermissionHelper.show(.screenRecording)
                 }
             }
             Reveal(delay: 0.4) {
-                Text("The microphone, speech and your calendar are asked for the first time you use them.")
+                Text("Allow opens System Settings with Isola beside it: drag it into the list and turn it on. The microphone, speech and your calendar are asked for the first time you use them.")
                     .font(.system(size: 11.5)).foregroundStyle(.white.opacity(0.45))
             }
         }
