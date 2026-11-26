@@ -856,6 +856,7 @@ struct MoreActivitySettings: View {
     @AppStorage(Prefs.liveCalendar) private var calendar = true
     @AppStorage(Prefs.liveDiskSpace) private var diskSpace = true
     @AppStorage(Prefs.liveFocus) private var focus = true
+    @AppStorage(Prefs.liveTV) private var tv = true
     @State private var trusted = AXIsProcessTrusted()
     @State private var focusReadable = SystemActivities.currentFocus() != nil
 
@@ -875,6 +876,7 @@ struct MoreActivitySettings: View {
             Toggle("Keyboard layout changing", isOn: $keyboard)
             Toggle("Meetings five minutes before they start", isOn: $calendar)
             Toggle("Running low on storage", isOn: $diskSpace)
+            Toggle("Something new playing on your TV", isOn: $tv)
             Toggle("Focus turning on and off", isOn: $focus)
             if focus && !focusReadable {
                 permission("Focus needs Full Disk Access") {

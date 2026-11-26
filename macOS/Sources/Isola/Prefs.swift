@@ -42,6 +42,7 @@ enum Prefs {
     static let liveCalendar = "live.calendar"
     static let liveDiskSpace = "live.diskSpace"
     static let liveFocus = "live.focus"
+    static let liveTV = "live.tv"
     static let activityLinks = "activityLinks"
     static let activitiesOnly = "activitiesOnly"
     static let lockScreen = "lockScreen"
@@ -111,6 +112,7 @@ enum Prefs {
             liveCalendar: true,
             liveDiskSpace: true,
             liveFocus: true,
+            liveTV: true,
             activityLinks: true,
             gestures: true,
             hotKey: true,

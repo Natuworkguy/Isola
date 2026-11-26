@@ -25,6 +25,11 @@ final class SystemActivities {
         startKeyboard()
         startFolderWatchers()
         clockAlerts.start()
+        // the TV is only looked for once it has been chosen or its widget added: looking asks for local network access
+        let widgets = defaults.string(forKey: Prefs.homeWidgets) ?? ""
+        if widgets.split(separator: ",").contains("tv") || defaults.string(forKey: "tv.chosen")?.isEmpty == false {
+            TVs.shared.start()
+        }
         let timer = Timer(timeInterval: 0.25, repeats: true) { [weak self] _ in self?.tick() }
         RunLoop.main.add(timer, forMode: .common)
         self.timer = timer

@@ -136,11 +136,34 @@ final class TVs: ObservableObject {
         let link = CastLink(device: device)
         link.onChange = { [weak self, weak link] state, isConnected in
             guard let self, let link, self.link === link else { return }
+            if isConnected && !self.connected { self.connectedAt = Date() }
+            self.announce(state, on: link.device)
             self.playing = state
             self.connected = isConnected
         }
         link.start()
         self.link = link
+    }
+
+    /// A banner in the island when the TV starts playing something new (from anyone's phone, or from here).
+    private var announced = ""
+    private var connectedAt = Date()
+
+    private func announce(_ state: TVPlaying, on device: TVDevice) {
+        let key = state.title.isEmpty ? state.app : state.app + "|" + state.title
+        guard state.playing, !state.idle, !key.isEmpty, key != announced else {
+            if state.idle { announced = "" }
+            return
+        }
+        announced = key
+        // not for whatever was already on when Isola connected
+        guard Date().timeIntervalSince(connectedAt) > 4, UserDefaults.standard.bool(forKey: Prefs.liveTV) else { return }
+        let title = state.title.isEmpty ? state.app : state.title
+        let subtitle = state.title.isEmpty ? "On \(device.name)" : "\(state.app) on \(device.name)"
+        let pause = BannerAction(title: "Pause", symbol: "pause.fill") { [weak self] in self?.link?.media("PAUSE") }
+        AppState.shared.showBanner(
+            IslandBanner(symbol: device.symbol, tint: Color(red: 0.55, green: 0.45, blue: 1), title: title,
+                         subtitle: subtitle, action: state.canControl ? pause : nil), for: 5)
     }
 
     // MARK: Controls
