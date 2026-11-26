@@ -178,6 +178,12 @@ final class TVs: ObservableObject {
     func volumeStep(_ delta: Double) { link?.setVolume(min(1, max(0, playing.volume + delta))) }
     func stopApp() { link?.stopApp() }
 
+    /// The chosen TV's address on the network (for the remote).
+    func address(_ done: @escaping (String?) -> Void) {
+        guard let link else { return done(nil) }
+        link.remoteAddress(done)
+    }
+
     // MARK: Sending things to the TV
 
     /// A file on this Mac: a video, a song or a picture. Isola serves it on the network while the TV plays it.
@@ -421,6 +427,22 @@ final class CastLink {
         queue.async {
             guard !self.sessionID.isEmpty else { return }
             self.send(Self.receiver, to: "receiver-0", ["type": "STOP", "sessionId": self.sessionID])
+        }
+    }
+
+    /// The TV's own address, once connected.
+    func remoteAddress(_ done: @escaping (String?) -> Void) {
+        queue.async {
+            var host: String?
+            if case let .hostPort(h, _) = self.connection?.currentPath?.remoteEndpoint {
+                switch h {
+                case .ipv4(let a): host = "\(a)"
+                case .ipv6(let a): host = "\(a)".components(separatedBy: "%").first
+                case .name(let n, _): host = n
+                @unknown default: host = nil
+                }
+            }
+            DispatchQueue.main.async { done(host) }
         }
     }
 
@@ -856,6 +878,8 @@ struct TVWidget: View {
                 WidgetButton(symbol: "goforward.30", size: 24) { tvs.skip(30) }
             }
             Spacer(minLength: 0)
+            WidgetButton(symbol: "av.remote.fill", size: 24) { TVRemoteWindow.shared.show() }
+                .help("Remote")
             WidgetButton(symbol: p.muted ? "speaker.slash.fill" : "speaker.wave.2.fill", size: 24) { tvs.toggleMute() }
             Slider(value: Binding(get: { tvs.playing.volume }, set: { tvs.setVolume($0) }), in: 0 ... 1)
                 .controlSize(.mini)

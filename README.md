@@ -107,7 +107,8 @@ specific to it.
   plays, so seeking works). Or send Safari's page or a copied link: YouTube links open in the TV's YouTube, and links
   straight to a video, stream, song or picture play as they are. For an AirPlay TV: send Music's sound to it, or mirror
   the screen. When something new starts on the TV, from anyone's phone or from the Mac, the island says what, with
-  Pause.
+  Pause. A Google TV or Android TV also gets a remote, over adb once the TV has allowed this Mac: arrows and OK,
+  Back, Home, power, volume, typing into its search boxes, and opening its apps. The Mac's arrow keys work it too.
 - **Safari:** when the sound is Safari's, the card has Tab (brings forward the tab that plays it), back and ahead ten
   seconds, Speed and Picture in Picture (those last three need Develop, Allow JavaScript from Apple Events in Safari;
   Isola says so if it's off). Downloads show their progress in the ears while they come in, with the speed and the
