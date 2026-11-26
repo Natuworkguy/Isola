@@ -48,6 +48,10 @@
     <string>Isola turns what you dictate into text, on this Mac where it can.</string>
     <key>NSScreenCaptureUsageDescription</key>
     <string>Isola captures the part of the screen you choose, to mark up or to read its text.</string>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>Isola finds the TVs and speakers on your network, shows what they play and sends videos, music and pictures to them.</string>
+    <key>NSBonjourServices</key>
+    <array><string>_googlecast._tcp</string><string>_airplay._tcp</string></array>
     <key>NSCalendarsFullAccessUsageDescription</key>
     <string>Isola shows your upcoming events in the island.</string>
 </dict>

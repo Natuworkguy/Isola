@@ -47,6 +47,7 @@ struct WidgetCard: View {
         case .counter: CounterWidget()
         case .colors: ColorPickerWidget(picks: ColorPicks.shared)
         case .devices: DevicesWidget(batteries: BluetoothBatteries.shared)
+        case .tv: TVWidget(tvs: TVs.shared)
         }
     }
 }

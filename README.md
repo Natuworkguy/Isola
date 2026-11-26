@@ -91,15 +91,22 @@ specific to it.
 ## Features
 
 - **Home:** a row of live widgets, and a pencil that arranges them right in the island. The widgets shrink with dashed
-  outlines; drag them into a new order, or drag new ones up from the gallery. 25 widgets: clock, analog clock, world
+  outlines; drag them into a new order, or drag new ones up from the gallery. 26 widgets: clock, analog clock, world
   clock, now playing, weather, battery, system graphs, network speed, storage, uptime, next event, today, month,
   day and year progress, timer, Focus sessions, stopwatch, clipboard, File Tray, shortcuts, Keep Awake, moon phase,
-  dice, counter, a colour picker, and the batteries of your Bluetooth devices. Separators, as many as you like, split them into groups.
+  dice, counter, a colour picker, the batteries of your Bluetooth devices, and your TV. Separators, as many as you like, split them into groups.
 - **Media:** whatever macOS reports as now playing: Music, Spotify, podcasts, VLC, and videos in Safari, Chrome and
   other browsers. Artwork, the source app, a draggable seek bar and transport controls, and a card for each app when
   several play: every app making sound gets one, Music and Spotify with their track and their own controls, others by
   name with a click that brings them forward. Pop it out into a floating player that stays on the desktop, on every
   Space; it grows a row for each other app playing. Turn on lyrics and the line being sung shows under the artist.
+- **TV and Cast:** the TV widget finds the Chromecasts, Google TVs, Android TVs, Nest speakers, Apple TVs and AirPlay
+  TVs on your network. For a Cast TV it shows what is on (the app, and the title, artwork and progress when the app
+  says), with play and pause, back 10 and ahead 30 seconds, a seek bar, the TV's volume and mute, and Stop. Drop a
+  video, song or picture from the Mac on it and it plays on the TV (Isola serves the file on your network while it
+  plays, so seeking works). Or send Safari's page or a copied link: YouTube links open in the TV's YouTube, and links
+  straight to a video, stream, song or picture play as they are. For an AirPlay TV: send Music's sound to it, or mirror
+  the screen.
 - **Safari:** when the sound is Safari's, the card has Tab (brings forward the tab that plays it), back and ahead ten
   seconds, Speed and Picture in Picture (those last three need Develop, Allow JavaScript from Apple Events in Safari;
   Isola says so if it's off). Downloads show their progress in the ears while they come in, with the speed and the

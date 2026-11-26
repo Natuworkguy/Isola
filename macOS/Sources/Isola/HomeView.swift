@@ -5,7 +5,7 @@ import SwiftUI
 enum HomeWidget: String, CaseIterable, Identifiable {
     case clock, analog, world, media, weather, battery, system, network, disk, uptime
     case calendar, date, month, progress, timer, focus, stopwatch, clipboard, tray, shortcuts
-    case awake, moon, dice, counter, colors, devices
+    case awake, moon, dice, counter, colors, devices, tv
 
     var id: String { rawValue }
 
@@ -37,6 +37,7 @@ enum HomeWidget: String, CaseIterable, Identifiable {
         case .counter: return "Counter"
         case .colors: return "Color Picker"
         case .devices: return "Devices"
+        case .tv: return "TV"
         }
     }
 
@@ -68,6 +69,7 @@ enum HomeWidget: String, CaseIterable, Identifiable {
         case .counter: return "plus.forwardslash.minus"
         case .colors: return "eyedropper"
         case .devices: return "headphones"
+        case .tv: return "tv.fill"
         }
     }
 
@@ -100,11 +102,12 @@ enum HomeWidget: String, CaseIterable, Identifiable {
         case .counter: return [Color(red: 1, green: 0.45, blue: 0.7), Color(red: 0.85, green: 0.2, blue: 0.5)]
         case .colors: return [Color(red: 1, green: 0.6, blue: 0.2), Color(red: 0.55, green: 0.3, blue: 0.95)]
         case .devices: return [Color(red: 0.4, green: 0.75, blue: 1), Color(red: 0.2, green: 0.45, blue: 0.95)]
+        case .tv: return [Color(red: 0.55, green: 0.45, blue: 1), Color(red: 0.25, green: 0.2, blue: 0.75)]
         }
     }
 
     /// Wide widgets take the room of two.
-    var wide: Bool { self == .media || self == .calendar }
+    var wide: Bool { self == .media || self == .calendar || self == .tv }
     var width: CGFloat { wide ? 222 : 108 }
 
     static let defaults: [HomeWidget] = [.clock, .media, .battery, .system]
