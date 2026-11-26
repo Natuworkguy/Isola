@@ -7,7 +7,18 @@ struct NowPlayingView: View {
 
     var body: some View {
         if monitor.players.count > 1 {
-            PlayerStack(monitor: monitor)
+            VStack(spacing: 6) {
+                // how many are playing, and the floating player, which shows them all too
+                HStack {
+                    Text("\(monitor.players.count) playing")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.55))
+                    Spacer()
+                    popOutButton
+                }
+                .padding(.horizontal, 4)
+                PlayerStack(monitor: monitor)
+            }
         } else if monitor.hasTrack {
             HStack(spacing: 24) {
                 ArtworkView(image: monitor.artwork, icon: monitor.sourceIcon, size: 132, radius: 20)
