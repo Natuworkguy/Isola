@@ -1,6 +1,7 @@
 import Foundation
 
 struct MediaInfo {
+    /// The app playing: for a web page, Safari or the app whose web view it is, not WebKit's helper.
     var bundleID: String
     var title: String
     var artist: String
@@ -10,6 +11,15 @@ struct MediaInfo {
     var timestamp: Date
     var rate: Double
     var artworkData: Data?
+    /// The process macOS reported, by bundle ID and process ID: the app itself, or a helper such as com.apple.WebKit.GPU.
+    var source = ""
+    var pid: pid_t? = nil
+
+    /// True when OTHER came from the same process, which plays one thing at a time.
+    func isSameSource(as other: MediaInfo) -> Bool {
+        if let pid, let otherPID = other.pid { return pid == otherPID }
+        return !source.isEmpty && source == other.source
+    }
 }
 
 final class MediaRemoteStream {
@@ -26,6 +36,7 @@ final class MediaRemoteStream {
     private var state: [String: Any] = [:]
     private var artworkText = ""
     private var artworkBytes: Data?
+    private var owner: (key: String, app: String?) = ("", nil)
     private var stopping = false
 
     init?() {
@@ -169,8 +180,9 @@ final class MediaRemoteStream {
         }
 
         let stamp = (number("timestampEpochMicros") ?? Date().timeIntervalSince1970 * 1_000_000) / 1_000_000
+        let pid = (state["processIdentifier"] as? NSNumber).map { pid_t(truncatingIfNeeded: $0.intValue) }
         return MediaInfo(
-            bundleID: (state["parentApplicationBundleIdentifier"] as? String) ?? bundleID,
+            bundleID: (state["parentApplicationBundleIdentifier"] as? String) ?? app(for: bundleID, pid: pid),
             title: title,
             artist: (state["artist"] as? String) ?? "",
             isPlaying: (state["playing"] as? Bool) ?? false,
@@ -178,7 +190,17 @@ final class MediaRemoteStream {
             elapsed: (number("elapsedTimeMicros") ?? 0) / 1_000_000,
             timestamp: Date(timeIntervalSince1970: stamp),
             rate: number("playbackRate") ?? 1,
-            artworkData: artwork
+            artworkData: artwork,
+            source: bundleID,
+            pid: pid
         )
+    }
+
+    /// The app a report is for. A web page reports through WebKit's helper (com.apple.WebKit.GPU), and macOS names
+    /// the app it plays for in a later report, if at all: name it from the first one, so the player keeps one name.
+    private func app(for bundle: String, pid: pid_t?) -> String {
+        let key = "\(bundle)|\(pid ?? 0)"
+        if owner.key != key { owner = (key, ProcessOwner.appBundleID(bundleID: bundle, pid: pid)) }
+        return owner.app ?? bundle
     }
 }

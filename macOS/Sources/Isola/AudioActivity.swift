@@ -2,13 +2,16 @@ import CoreAudio
 import Foundation
 
 /// Which apps are sending sound to an output right now, from CoreAudio's process objects (macOS 14.2 and later).
-/// On older systems the answer is always empty.
+/// A helper's sound also counts as its app's: com.apple.WebKit.GPU plays for Safari, or for whichever app's web view
+/// it serves. On older systems the answer is always empty.
 enum AudioActivity {
     // CoreAudio selectors, spelled out so Isola builds with SDKs older than 14.2:
-    // kAudioHardwarePropertyProcessObjectList, kAudioProcessPropertyBundleID, kAudioProcessPropertyIsRunningOutput.
+    // kAudioHardwarePropertyProcessObjectList, kAudioProcessPropertyBundleID, kAudioProcessPropertyIsRunningOutput,
+    // kAudioProcessPropertyPID.
     private static let processList = code("prs#")
     private static let bundleID = code("pbid")
     private static let runningOutput = code("piro")
+    private static let processID = code("ppid")
 
     private static func code(_ text: String) -> UInt32 {
         text.utf8.reduce(0) { ($0 << 8) | UInt32($1) }
@@ -37,9 +40,16 @@ enum AudioActivity {
             var name: Unmanaged<CFString>?
             var nameSize = UInt32(MemoryLayout<Unmanaged<CFString>?>.size)
             var nameAddress = address(bundleID)
-            guard AudioObjectGetPropertyData(process, &nameAddress, 0, nil, &nameSize, &name) == noErr,
-                  let name else { continue }
-            playing.insert(name.takeRetainedValue() as String)
+            var bundle = ""
+            if AudioObjectGetPropertyData(process, &nameAddress, 0, nil, &nameSize, &name) == noErr, let name {
+                bundle = name.takeRetainedValue() as String
+            }
+            var pid = pid_t(0)
+            var pidSize = UInt32(MemoryLayout<pid_t>.size)
+            var pidAddress = address(processID)
+            let hasPID = AudioObjectGetPropertyData(process, &pidAddress, 0, nil, &pidSize, &pid) == noErr && pid > 0
+            if !bundle.isEmpty { playing.insert(bundle) }
+            if let owner = ProcessOwner.appBundleID(bundleID: bundle, pid: hasPID ? pid : nil) { playing.insert(owner) }
         }
         return playing
     }

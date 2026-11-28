@@ -200,6 +200,12 @@ final class NowPlayingMonitor: ObservableObject {
     private func apply(_ info: MediaInfo?) {
         latest = info
         if let info {
+            // One process plays one thing. A web page's first report can name WebKit's helper (com.apple.WebKit.GPU)
+            // before macOS names the app it plays for: drop the entry under the other name, or it stays "playing in
+            // the background" for as long as the helper lives, since its pause is reported under the app's name.
+            for (key, entry) in remembered where key != info.bundleID && entry.isSameSource(as: info) {
+                remembered.removeValue(forKey: key)
+            }
             if info.isPlaying {
                 remembered[info.bundleID] = info
             } else {
@@ -215,8 +221,8 @@ final class NowPlayingMonitor: ObservableObject {
     /// reported app is paused or gone, show another app that was playing when last heard from and is still
     /// making sound.
     private func backgroundPlayers() -> [MediaInfo] {
-        // Forget apps that have quit.
-        for (bundle, _) in remembered where NSRunningApplication.runningApplications(withBundleIdentifier: bundle).isEmpty {
+        // Forget apps that have quit, and web pages whose WebKit process has gone.
+        for (bundle, info) in remembered where hasQuit(info) {
             remembered.removeValue(forKey: bundle)
         }
         let candidates = remembered.values.filter { $0.bundleID != latest?.bundleID }
@@ -225,6 +231,11 @@ final class NowPlayingMonitor: ObservableObject {
         return candidates
             .filter { AudioActivity.isPlaying($0.bundleID, in: playing) }
             .sorted { $0.timestamp > $1.timestamp }
+    }
+
+    private func hasQuit(_ info: MediaInfo) -> Bool {
+        if let pid = info.pid { return NSRunningApplication(processIdentifier: pid) == nil }
+        return NSRunningApplication.runningApplications(withBundleIdentifier: info.bundleID).isEmpty
     }
 
     private func refreshBackground() {
@@ -244,31 +255,18 @@ final class NowPlayingMonitor: ObservableObject {
     }
 
     /// Apps making sound that macOS doesn't report and Isola hasn't heard from: what CoreAudio says is playing,
-    /// helper processes counted as their app (a browser's tab plays from a helper), Isola itself and system
-    /// processes left out. Music and Spotify are asked what they play, so their cards have the track and controls.
+    /// helper processes counted as their app (a browser's tab plays from a helper, and a web page from WebKit's,
+    /// which AudioActivity names as its app), Isola itself and system processes left out. Music and Spotify are asked
+    /// what they play, so their cards have the track and controls.
     private func otherPlayers(skipping known: Set<String>) -> [(info: MediaInfo, script: PlayerApp?)] {
         let playing = AudioActivity.playingBundleIDs()
         var apps: [String] = []
         let running = NSWorkspace.shared.runningApplications.filter { $0.activationPolicy == .regular }
         for id in playing {
-            var owner = running.first { app in
+            let owner = running.first { app in
                 guard let bundle = app.bundleIdentifier else { return false }
                 return id == bundle || id.hasPrefix(bundle + ".")
             }?.bundleIdentifier
-            // Safari's tabs (and its web apps' pages) play through WebKit's own processes: counted as Safari, or as
-            // the web app in front if Safari itself isn't open, or as Safari Technology Preview if only it is.
-            if owner == nil, id.hasPrefix("com.apple.WebKit") {
-                let ids = running.compactMap(\.bundleIdentifier)
-                if ids.contains("com.apple.Safari") {
-                    owner = "com.apple.Safari"
-                } else if ids.contains("com.apple.SafariTechnologyPreview") {
-                    owner = "com.apple.SafariTechnologyPreview"
-                } else {
-                    let front = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
-                    owner = (front.map { $0.hasPrefix("com.apple.Safari.WebApp") } ?? false) ? front
-                        : ids.first { $0.hasPrefix("com.apple.Safari.WebApp") }
-                }
-            }
             guard let owner, owner != Bundle.main.bundleIdentifier, owner != latest?.bundleID,
                   !known.contains(owner), !apps.contains(owner) else { continue }
             apps.append(owner)
@@ -343,6 +341,10 @@ final class NowPlayingMonitor: ObservableObject {
         if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) {
             identity = (FileManager.default.displayName(atPath: url.path).replacingOccurrences(of: ".app", with: ""),
                         NSWorkspace.shared.icon(forFile: url.path))
+        } else if let process = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).first,
+                  let name = process.localizedName, !name.isEmpty {
+            // Not an app (a helper whose app couldn't be told): its own name rather than its bundle ID.
+            identity = (name, process.icon)
         }
         appCache[bundleID] = identity
         return identity
